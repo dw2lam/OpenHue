@@ -12,10 +12,10 @@
 //   * Liquid-Glass-style top sheen + thin rim light along the top edge
 //
 // Usage:
-//   swift Icon/render.swift <artwork.png> <out.png> [--scale 1.10] [--no-shadow]
+//   swift Icon/render.swift <artwork.png> <out.png> [--scale 1.05] [--no-shadow]
 //
 //   --scale S   scale the artwork to S x 824 px before cropping it into the
-//               squircle (default 1.10 = slight crop-in so the bulb fills the
+//               squircle (default 1.05 = slight crop-in so the bulb fills the
 //               icon a little more). 1.0 = artwork exactly fits the squircle.
 //   --no-shadow omit the drop shadow.
 //
@@ -27,18 +27,18 @@ import Foundation
 
 let args = CommandLine.arguments
 guard args.count >= 3 else {
-    FileHandle.standardError.write("usage: swift render.swift <artwork.png> <out.png> [--scale 1.10] [--no-shadow]\n".data(using: .utf8)!)
+    FileHandle.standardError.write("usage: swift render.swift <artwork.png> <out.png> [--scale 1.05] [--no-shadow]\n".data(using: .utf8)!)
     exit(2)
 }
 let srcPath = args[1]
 let outPath = args[2]
-var artScale: CGFloat = 1.10
+var artScale: CGFloat = 1.05
 var drawShadow = true
 var i = 3
 while i < args.count {
     switch args[i] {
     case "--scale" where i + 1 < args.count:
-        artScale = CGFloat(Double(args[i + 1]) ?? 1.10); i += 2
+        artScale = CGFloat(Double(args[i + 1]) ?? 1.05); i += 2
     case "--no-shadow":
         drawShadow = false; i += 1
     default:
