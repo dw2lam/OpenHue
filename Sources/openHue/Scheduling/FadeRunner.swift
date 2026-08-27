@@ -205,7 +205,7 @@ final class FadeRunner: ObservableObject {
         timer = t
         timerInterval = interval
         if sleepAssertion == nil {
-            sleepAssertion = PowerManagement.SleepAssertion(reason: "openHue: light fade in progress")
+            sleepAssertion = PowerManagement.SleepAssertion(reason: "OpenHue: light fade in progress")
         }
     }
 

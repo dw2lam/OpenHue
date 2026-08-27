@@ -2,18 +2,18 @@
 import PackageDescription
 
 let package = Package(
-    name: "openHue",
+    name: "OpenHue",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "openHue",
-            path: "Sources/openHue",
+            name: "OpenHue",
+            path: "Sources/OpenHue",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
-            name: "openHueTests",
-            dependencies: ["openHue"],
-            path: "Tests/openHueTests",
+            name: "OpenHueTests",
+            dependencies: ["OpenHue"],
+            path: "Tests/OpenHueTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

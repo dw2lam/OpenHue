@@ -131,7 +131,7 @@ private struct DiscoveryContent: View {
     private var warningText: String {
         switch central.managerState {
         case .poweredOff: return "Bluetooth is off. Turn it on in Control Center or System Settings."
-        case .unauthorized: return "Bluetooth access denied. Allow openHue in System Settings → Privacy & Security → Bluetooth."
+        case .unauthorized: return "Bluetooth access denied. Allow OpenHue in System Settings → Privacy & Security → Bluetooth."
         case .unsupported: return "This Mac has no Bluetooth Low Energy support."
         default: return "Bluetooth is starting up…"
         }

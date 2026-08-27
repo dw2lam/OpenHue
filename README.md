@@ -1,17 +1,18 @@
-<p align="center"><img src="Icon/preview-512.png" width="160" alt="openHue icon"></p>
+<p align="center"><img src="Icon/preview-512.png" width="160" alt="OpenHue icon"></p>
 
-# openHue
+# OpenHue
 
 A native macOS app that controls Philips Hue **Bluetooth** bulbs directly over BLE — no Hue Bridge, no cloud, no phone. Swift / SwiftUI / CoreBluetooth, macOS 14+.
 
 ## What it is
 
-Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses for the "Hue Bluetooth" phone app. openHue talks the same GATT protocol from your Mac: it discovers bulbs, pairs with them, reads and writes their state, and runs schedules on the Mac's clock. Everything stays local.
+Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses for the "Hue Bluetooth" phone app. OpenHue talks the same GATT protocol from your Mac: it discovers bulbs, pairs with them, reads and writes their state, and runs schedules on the Mac's clock. Everything stays local.
 
 ## Features
 
 - Discover and pair bulbs, remember them across launches, keep them connected for instant commands.
 - Per-light power, brightness, colour temperature, xy colour and the bulb's built-in effects (candle, fireplace, …).
+- **Police** effect — red/blue strobe driven by the Mac, alternating between bulbs like a light bar (Effects tab → "From this Mac"); any manual change stops it and restores the previous state.
 - "All lights" controls, plus a menu-bar extra for quick access.
 - Scenes: Hue's stock scenes (Bright, Relax, Energize, Savanna Sunset, …) and your own snapshots ("Save current as scene…").
 - Schedules: weekly or one-off, turn on/off, **wake-up fade-in** and **go-to-sleep fade-out**, targeting all lights or a subset.
@@ -22,18 +23,18 @@ Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses
 
 - **Bluetooth range.** Bulbs must be within BLE range of the Mac (a room or two; walls hurt).
 - **One connected device per bulb.** While this app is connected the Hue phone app can't reach the bulb, and vice versa. Use *Disconnect All* (Settings → Data, or the menu bar) to hand a bulb over.
-- **No on-bulb schedules.** Hue bulbs only accept schedules created by the official app (the request is MAC-protected). Schedules in openHue run on the Mac — see [Schedules](#schedules).
+- **No on-bulb schedules.** Hue bulbs only accept schedules created by the official app (the request is MAC-protected). Schedules in OpenHue run on the Mac — see [Schedules](#schedules).
 - **Bridge-joined bulbs are unsupported.** Once a bulb has joined a Hue Bridge (Zigbee) its Bluetooth control is disabled. Remove it from the Bridge or factory-reset it.
 - **Renaming is best effort.** The name is stored locally and also written to the bulb's name characteristic, which some firmware ignores.
 
 ## Install
 
-Grab `openHue.zip` (or the `.dmg`) from the [latest release](https://github.com/dw2lam/openHue/releases/latest), unzip, and drag **openHue.app** to `/Applications`.
+Grab `OpenHue.zip` (or the `.dmg`) from the [latest release](https://github.com/dw2lam/OpenHue/releases/latest), unzip, and drag **OpenHue.app** to `/Applications`.
 
 The build is signed with an Apple *Development* certificate, not a notarized Developer ID, so on first launch Gatekeeper will refuse it. Either **right-click → Open → Open**, or clear the quarantine flag once:
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/openHue.app
+xattr -dr com.apple.quarantine /Applications/OpenHue.app
 ```
 
 Then follow [First launch](#first-launch). To build from source instead, see [Build & run](#build--run).
@@ -43,8 +44,8 @@ Then follow [First launch](#first-launch). To build from source instead, see [Bu
 Requirements: Xcode 26 (Swift 6 toolchain, Swift 5 language mode), macOS 14 or later.
 
 ```sh
-./make-app.sh          # builds build/openHue.app (release), signs with your Apple Development identity if one is present
-open "build/openHue.app"
+./make-app.sh          # builds build/OpenHue.app (release), signs with your Apple Development identity if one is present
+open "build/OpenHue.app"
 swift test             # protocol / colour-math / scheduler tests
 ```
 
@@ -52,7 +53,7 @@ Do **not** run the bare binary with `swift run`. The Bluetooth permission is att
 
 ## First launch
 
-1. macOS asks *"openHue would like to use Bluetooth"* — click **Allow**.
+1. macOS asks *"OpenHue would like to use Bluetooth"* — click **Allow**.
    If you denied it (or it never appeared), enable the app under **System Settings → Privacy & Security → Bluetooth**, then relaunch.
 2. Click **Add Light**. Power the bulb on and keep it within a couple of metres; it appears in the list with a signal indicator.
 3. Click **Add**. The first command to the bulb triggers pairing — see below.
@@ -63,7 +64,7 @@ Hue bulbs pair implicitly: the first encrypted read makes macOS show a **Connect
 
 If the dialog never appears or pairing fails, the bulb is still bonded to your phone and is refusing new pairings. Bulbs only accept a new pairing while **discoverable**:
 
-1. **Make the bulb discoverable from the phone — no Bridge needed, and the phone app keeps working.** In the Hue app go to **Settings → Voice Assistants → Amazon Alexa** (or **Google Home**) **→ Make Discoverable**. This is the same window Echo/Nest speakers use to pair with Bluetooth-only bulbs, and it's what openHue needs. Then, within a minute or two, click **Retry** in openHue (or add the light). If the phone app is still holding the connection, background it right after tapping Make Discoverable.
+1. **Make the bulb discoverable from the phone — no Bridge needed, and the phone app keeps working.** In the Hue app go to **Settings → Voice Assistants → Amazon Alexa** (or **Google Home**) **→ Make Discoverable**. This is the same window Echo/Nest speakers use to pair with Bluetooth-only bulbs, and it's what OpenHue needs. Then, within a minute or two, click **Retry** in OpenHue (or add the light). If the phone app is still holding the connection, background it right after tapping Make Discoverable.
 2. **Last resort — factory reset.** Switch the bulb off and on **5 times** (about a second apart), ending **on**; it blinks on the last cycle. This unpairs the phone app too and gives the bulb a **new Bluetooth address**, so it appears as a fresh "Hue Lamp": use **Add Light → "Add as replacement for…"** and pick the old entry (name, scenes and schedules carry over), then click **Connect** on the macOS Connection Request.
 3. If macOS still refuses, forget any stale **"Hue Lamp"** entry in **System Settings → Bluetooth** (hover → ⓘ → Forget) and retry.
 4. **Bulb joined to a Hue Bridge?** It cannot be controlled over Bluetooth at all. Delete it from the Bridge first.
@@ -72,15 +73,15 @@ The same steps are shown inside the app (Add Light → Pairing help, and in a li
 
 ## Schedules
 
-Third-party apps can't store schedules on the bulb, so openHue runs them **on this Mac**. For a schedule to fire:
+Third-party apps can't store schedules on the bulb, so OpenHue runs them **on this Mac**. For a schedule to fire:
 
 - the Mac must be **awake** (not sleeping; the display may be off),
-- **openHue must be running** — turn on **Launch at login** (Settings → General),
+- **OpenHue must be running** — turn on **Launch at login** (Settings → General),
 - the bulbs must be **within Bluetooth range**.
 
 Helpers in **Settings → Schedules / Wake Mac**:
 
-- **Keep this Mac awake while openHue is running** holds a `PreventUserIdleSystemSleep` assertion. Reliable on a desktop or a plugged-in laptop; on battery it costs power.
+- **Keep this Mac awake while OpenHue is running** holds a `PreventUserIdleSystemSleep` assertion. Reliable on a desktop or a plugged-in laptop; on battery it costs power.
 - **Wake this Mac** writes a `pmset repeat wakeorpoweron <days> <time>` entry (macOS asks for your administrator password once). The app suggests the union of your weekly schedule days at 2 minutes before the earliest one. A MacBook with the **lid closed** only wakes for this if it is on power **and** connected to an external display; otherwise open the lid. `pmset repeat cancel` removes *all* repeating pmset events, so check `pmset -g sched` if you use others.
 - **Missed schedules.** If the Mac was asleep at the trigger time, an *on* schedule still runs when the Mac wakes within the grace window (default 30 min — a wake-up fade resumes mid-ramp), and an *off* schedule within its own window (default 6 h). Set either to 0 to disable.
 
@@ -88,7 +89,7 @@ Each row in the Schedules view shows the next fire time and the last outcome ("R
 
 ## Data location
 
-Everything lives in `~/Library/Application Support/openHue/` as plain JSON (`lights.json`, `scenes.json`, `schedules.json`, `settings.json`), written atomically. Settings → Data → **Open folder** reveals it. Deleting the folder resets the app; the Bluetooth bonds themselves live in macOS (System Settings → Bluetooth).
+Everything lives in `~/Library/Application Support/OpenHue/` as plain JSON (`lights.json`, `scenes.json`, `schedules.json`, `settings.json`), written atomically. Settings → Data → **Open folder** reveals it. Deleting the folder resets the app; the Bluetooth bonds themselves live in macOS (System Settings → Bluetooth).
 
 ## Troubleshooting
 

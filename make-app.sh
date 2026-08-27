@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Builds "openHue.app" into ./build — a proper double-clickable macOS app bundle.
+# Builds "OpenHue.app" into ./build — a proper double-clickable macOS app bundle.
 #
 #   ./make-app.sh             build (release), sign, and launch
 #   ./make-app.sh --no-open   build and sign only
-#   ./make-app.sh --dmg       also produce build/openHue.dmg
+#   ./make-app.sh --dmg       also produce build/OpenHue.dmg
 #   BUILD_CONFIG=debug ./make-app.sh
 #   SIGN_IDENTITY="Apple Development: …" ./make-app.sh
 set -euo pipefail
@@ -23,10 +23,10 @@ CONFIG=${BUILD_CONFIG:-release}
 swift build -c "$CONFIG"
 BIN=$(swift build -c "$CONFIG" --show-bin-path)
 
-APP="build/openHue.app"
+APP="build/OpenHue.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN/openHue" "$APP/Contents/MacOS/openHue"
+cp "$BIN/OpenHue" "$APP/Contents/MacOS/OpenHue"
 [ -f AppIcon.icns ] && cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # NSBluetoothAlwaysUsageDescription is mandatory: without it macOS terminates the app the moment
@@ -37,10 +37,10 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
-    <key>CFBundleName</key><string>openHue</string>
-    <key>CFBundleDisplayName</key><string>openHue</string>
+    <key>CFBundleName</key><string>OpenHue</string>
+    <key>CFBundleDisplayName</key><string>OpenHue</string>
     <key>CFBundleIdentifier</key><string>com.davidlam.openhue</string>
-    <key>CFBundleExecutable</key><string>openHue</string>
+    <key>CFBundleExecutable</key><string>OpenHue</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
@@ -51,7 +51,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHumanReadableCopyright</key><string>© 2026 David Lam</string>
-    <key>NSBluetoothAlwaysUsageDescription</key><string>openHue needs Bluetooth access to discover, pair with, and control your Philips Hue bulbs.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key><string>OpenHue needs Bluetooth access to discover, pair with, and control your Philips Hue bulbs.</string>
 </dict>
 </plist>
 PLIST
@@ -71,19 +71,19 @@ fi
 codesign --verify --strict --verbose=2 "$APP"
 
 if [ "$DMG" = 1 ]; then
-  DMG_PATH="build/openHue.dmg"
+  DMG_PATH="build/OpenHue.dmg"
   rm -f "$DMG_PATH"
-  if command -v create-dmg >/dev/null 2>&1 && create-dmg --volname "openHue" --window-size 520 320 --icon-size 100 \
-      --icon "openHue.app" 130 150 --app-drop-link 390 150 "$DMG_PATH" "$APP"; then
+  if command -v create-dmg >/dev/null 2>&1 && create-dmg --volname "OpenHue" --window-size 520 320 --icon-size 100 \
+      --icon "OpenHue.app" 130 150 --app-drop-link 390 150 "$DMG_PATH" "$APP"; then
     :
   else
-    hdiutil create -volname "openHue" -srcfolder "$APP" -ov -format UDZO "$DMG_PATH"
+    hdiutil create -volname "OpenHue" -srcfolder "$APP" -ov -format UDZO "$DMG_PATH"
   fi
   echo "Disk image: $DMG_PATH"
 fi
 
 if [ "$OPEN" = 1 ]; then
-  pkill -x openHue 2>/dev/null || true
+  pkill -x OpenHue 2>/dev/null || true
   open "$APP"
 fi
 

@@ -1,12 +1,12 @@
 import Foundation
 
-/// JSON persistence in ~/Library/Application Support/openHue/. One file per collection,
+/// JSON persistence in ~/Library/Application Support/OpenHue/. One file per collection,
 /// wrapped in a versioned envelope, written atomically.
 @MainActor
 final class Store {
     static let directory: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("openHue", isDirectory: true)
+        return base.appendingPathComponent("OpenHue", isDirectory: true)
     }()
 
     enum File: String {

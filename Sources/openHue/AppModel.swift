@@ -342,7 +342,7 @@ final class AppModel: ObservableObject, SchedulerContext {
 
         if new.keepMacAwakeWhileRunning {
             if sleepAssertion == nil {
-                sleepAssertion = PowerManagement.SleepAssertion(reason: "openHue is keeping your lights connected")
+                sleepAssertion = PowerManagement.SleepAssertion(reason: "OpenHue is keeping your lights connected")
             }
         } else if let assertion = sleepAssertion {
             assertion.release()

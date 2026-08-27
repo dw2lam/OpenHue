@@ -193,7 +193,7 @@ private struct BluetoothBanner: View {
     private var message: String {
         switch state {
         case .poweredOff: return "Bluetooth is off."
-        case .unauthorized: return "openHue needs Bluetooth access to talk to your bulbs."
+        case .unauthorized: return "OpenHue needs Bluetooth access to talk to your bulbs."
         case .unsupported: return "This Mac has no Bluetooth LE radio."
         default: return "Starting Bluetooth…"
         }

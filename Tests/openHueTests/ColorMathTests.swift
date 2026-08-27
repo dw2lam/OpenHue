@@ -1,5 +1,5 @@
 import XCTest
-@testable import openHue
+@testable import OpenHue
 
 final class ColorMathTests: XCTestCase {
     private let gamut = ColorMath.gamutC

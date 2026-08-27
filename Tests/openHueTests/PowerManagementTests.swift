@@ -1,5 +1,5 @@
 import XCTest
-@testable import openHue
+@testable import OpenHue
 
 final class PowerManagementTests: XCTestCase {
     func testPmsetCommandUsesCanonicalDayOrder() {
@@ -33,10 +33,10 @@ final class PowerManagementTests: XCTestCase {
     }
 
     func testSleepAssertionAcquireAndRelease() {
-        guard let assertion = PowerManagement.SleepAssertion(reason: "openHue tests") else {
+        guard let assertion = PowerManagement.SleepAssertion(reason: "OpenHue tests") else {
             return XCTFail("could not create a sleep assertion")
         }
-        XCTAssertEqual(assertion.reason, "openHue tests")
+        XCTAssertEqual(assertion.reason, "OpenHue tests")
         assertion.release()
         assertion.release()   // second release is a no-op
     }

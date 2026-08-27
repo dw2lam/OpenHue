@@ -1,6 +1,6 @@
-# openHue app icon
+# OpenHue app icon
 
-![openHue icon](preview-512.png)
+![OpenHue icon](preview-512.png)
 
 A Philips Hue "spectrum" light bulb (amber → magenta → violet → cyan, lit from inside)
 on a deep indigo → near-black background, composited onto Apple's macOS app-icon grid

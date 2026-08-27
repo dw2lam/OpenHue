@@ -1,6 +1,6 @@
 #!/usr/bin/env swift
 //
-// render.swift — openHue icon compositor.
+// render.swift — OpenHue icon compositor.
 //
 // Takes a full-bleed square artwork (any size, e.g. the 1024x1024 Codex render)
 // and composites it onto Apple's macOS app-icon grid:

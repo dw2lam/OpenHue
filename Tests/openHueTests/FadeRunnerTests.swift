@@ -1,5 +1,5 @@
 import XCTest
-@testable import openHue
+@testable import OpenHue
 
 @MainActor
 final class FadeRunnerTests: XCTestCase {

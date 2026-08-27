@@ -96,10 +96,10 @@ private struct ScheduleSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                HueInfoCallout("Schedules run on this Mac (the bulbs can't store them): the Mac must be awake, openHue running, and the bulbs within Bluetooth range.")
+                HueInfoCallout("Schedules run on this Mac (the bulbs can't store them): the Mac must be awake, OpenHue running, and the bulbs within Bluetooth range.")
             }
             Section("Sleep") {
-                SettingToggle("Keep this Mac awake while openHue is running",
+                SettingToggle("Keep this Mac awake while OpenHue is running",
                               caption: "Prevents idle sleep so morning schedules can fire. Battery impact on laptops.",
                               isOn: settingBinding(model, \.keepMacAwakeWhileRunning))
             }

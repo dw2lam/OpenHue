@@ -16,7 +16,7 @@ struct SchedulesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HueInfoCallout("Schedules run on this Mac — it must be awake, openHue running, and the bulbs in range.") {
+            HueInfoCallout("Schedules run on this Mac — it must be awake, OpenHue running, and the bulbs in range.") {
                 SettingsLink { Text("Settings…") }
                     .controlSize(.small)
             }

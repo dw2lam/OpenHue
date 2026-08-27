@@ -77,7 +77,7 @@ private struct DiagnosticsOverview: View {
         case .unknown: return "Unknown (starting up)"
         case .resetting: return "Resetting"
         case .unsupported: return "Unsupported on this Mac"
-        case .unauthorized: return "Unauthorized — allow openHue in System Settings → Privacy & Security → Bluetooth"
+        case .unauthorized: return "Unauthorized — allow OpenHue in System Settings → Privacy & Security → Bluetooth"
         case .poweredOff: return "Powered off"
         case .poweredOn: return "Powered on"
         @unknown default: return "Unknown state (\(state.rawValue))"

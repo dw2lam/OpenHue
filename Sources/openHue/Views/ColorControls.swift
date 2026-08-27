@@ -409,7 +409,7 @@ struct AppEffectsSection: View {
             HStack(spacing: 6) {
                 Text("From this Mac")
                     .font(.subheadline.weight(.semibold))
-                Text("— runs while openHue is open; touching a control stops it")
+                Text("— runs while OpenHue is open; touching a control stops it")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

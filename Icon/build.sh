@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build.sh — composite the openHue icon and produce every deliverable.
+# build.sh — composite the OpenHue icon and produce every deliverable.
 #
 #   Icon/source/artwork.png  --render.swift-->  Icon/icon-1024.png
 #                                            -->  Icon/AppIcon.iconset/*.png   (sips -z)

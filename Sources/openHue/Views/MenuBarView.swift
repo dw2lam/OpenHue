@@ -33,7 +33,7 @@ struct MenuBarView: View {
         HStack(spacing: 8) {
             Image(systemName: "lightbulb.fill")
                 .foregroundStyle(.yellow)
-            Text("openHue")
+            Text("OpenHue")
                 .font(.headline)
             Spacer()
             Text(statusText)
@@ -91,7 +91,7 @@ struct MenuBarView: View {
                 openWindow(id: "main")
                 NSApp.activate(ignoringOtherApps: true)
             } label: {
-                Label("Open openHue", systemImage: "macwindow")
+                Label("Open OpenHue", systemImage: "macwindow")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

@@ -2,12 +2,12 @@ import SwiftUI
 import AppKit
 
 @main
-struct openHueApp: App {
+struct OpenHueApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        Window("openHue", id: "main") {
+        Window("OpenHue", id: "main") {
             ContentView()
                 .environmentObject(model)
         }
@@ -16,7 +16,7 @@ struct openHueApp: App {
             CommandGroup(replacing: .newItem) {}
         }
 
-        MenuBarExtra("openHue", systemImage: "lightbulb") {
+        MenuBarExtra("OpenHue", systemImage: "lightbulb") {
             MenuBarView()
                 .environmentObject(model)
         }
@@ -77,6 +77,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let id = window.identifier?.rawValue else { return false }
             return id == "main" || id.hasPrefix("main-")
         }
-        return byIdentifier ?? NSApp.windows.first { $0.title == "openHue" && !($0 is NSPanel) }
+        return byIdentifier ?? NSApp.windows.first { $0.title == "OpenHue" && !($0 is NSPanel) }
     }
 }

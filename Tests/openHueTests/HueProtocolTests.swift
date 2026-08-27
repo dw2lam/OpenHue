@@ -1,5 +1,5 @@
 import XCTest
-@testable import openHue
+@testable import OpenHue
 
 final class HueProtocolTests: XCTestCase {
     private func hex(_ s: String) -> Data {
