@@ -89,6 +89,10 @@ Helpers in **Settings → Schedules / Wake Mac**:
 
 Each row in the Schedules view shows the next fire time and the last outcome ("Ran 07:00", "Skipped — Mac was asleep 45 min", …).
 
+## Roadmap
+
+The plan is to make these Bluetooth-only bulbs first-class devices on a home server — a headless bridge daemon plus a Homebridge/HomeKit plugin, running on any nearby machine with Bluetooth — see [ROADMAP.md](ROADMAP.md).
+
 ## Data location
 
 Everything lives in `~/Library/Application Support/OpenHue/` as plain JSON (`lights.json`, `scenes.json`, `schedules.json`, `settings.json`), written atomically. Settings → Data → **Open folder** reveals it. Deleting the folder resets the app; the Bluetooth bonds themselves live in macOS (System Settings → Bluetooth).
