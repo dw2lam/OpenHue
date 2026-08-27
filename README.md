@@ -4,6 +4,8 @@
 
 A native macOS app that controls Philips Hue **Bluetooth** bulbs directly over BLE — no Hue Bridge, no cloud, no phone. Swift / SwiftUI / CoreBluetooth, macOS 14+.
 
+<p align="center"><img src="docs/screenshot-all-lights.png" width="720" alt="OpenHue — All Lights view"></p>
+
 ## What it is
 
 Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses for the "Hue Bluetooth" phone app. OpenHue talks the same GATT protocol from your Mac: it discovers bulbs, pairs with them, reads and writes their state, and runs schedules on the Mac's clock. Everything stays local.
