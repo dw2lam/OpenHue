@@ -1,0 +1,12 @@
+.build/
+build/
+*.xcodeproj/
+.swiftpm/
+.DS_Store
+# Claude Code
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+# Derived icon artefacts (regenerate with Icon/build.sh)
+Icon/AppIcon.iconset/
+Icon/source/alternates/
