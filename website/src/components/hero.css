@@ -130,6 +130,32 @@
 }
 .hero__pill.is-on { opacity: 1; }
 
+/* GitHub — the one link that leaves the site: a distinct bordered button with the mark */
+.hero__gh {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(9px * var(--s));
+  height: calc(40px * var(--s));
+  margin-left: calc(6px * var(--s));
+  padding: 0 calc(14px * var(--s)) 0 calc(13px * var(--s));
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: calc(clamp(11px, 0.74vw, 13px) * var(--s));
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.hero__gh svg { width: calc(15px * var(--s)); height: calc(15px * var(--s)); }
+.hero__gh i { font-style: normal; color: var(--text-dimmer); transition: color 0.25s ease, transform 0.35s var(--ease-premium); }
+.hero__gh:hover { background: var(--fill-ghost); border-color: rgba(255, 255, 255, 0.5); }
+.hero__gh:hover i { color: var(--text); transform: translate(1px, -1px); }
+
 /* Hamburger (≤calc(900px * var(--s)) only) */
 .hero__toggle {
   position: relative;
@@ -160,7 +186,8 @@
 .hero__toggle.is-active .hero__bar:nth-child(3) { transform: translate(-50%, -6px) rotate(-45deg); }
 
 @media (max-width: 900px) {
-  .hero__links { display: none; }
+  .hero__links,
+  .hero__gh { display: none; }
   .hero__toggle { display: block; }
   .hero__island { gap: calc(2px * var(--s)); }
 }
@@ -210,6 +237,8 @@ body.menu-open { overflow: hidden; }
   text-decoration: none;
 }
 .hero__menu-link:hover { color: var(--text-dim); }
+.hero__menu-link--ext { display: inline-flex; align-items: center; gap: calc(12px * var(--s)); }
+.hero__menu-link--ext i { font-style: normal; color: var(--text-dimmer); font-size: 0.8em; }
 .hero__menu-cta {
   margin-top: clamp(calc(8px * var(--s)), calc(2vh * var(--s)), calc(20px * var(--s)));
   font-family: var(--font-mono);
@@ -442,6 +471,7 @@ body.menu-open { overflow: hidden; }
 
 /* ── Focus ──────────────────────────────────────────────────── */
 .hero__links a:focus-visible,
+.hero__gh:focus-visible,
 .hero__toggle:focus-visible,
 .hero__meta:focus-visible,
 .hero__btn:focus-visible,
