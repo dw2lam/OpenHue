@@ -107,10 +107,10 @@ export default function Hero() {
       </div>
 
       <header className="hero__nav">
-        <a className="hero__logo" href="#top" aria-label="OpenHue — top of page">
-          <img src="/icon.png" width="30" height="30" alt="" decoding="async" />
-        </a>
-        <div className="hero__cluster">
+        <div className="hero__island">
+          <a className="hero__logo" href="#top" aria-label="OpenHue — top of page">
+            <img src="/icon.png" width="30" height="30" alt="" decoding="async" />
+          </a>
           <nav className="hero__links" aria-label="Primary">
             {NAV_LINKS.map((link) => (
               <a key={link.label} href={link.href} {...externalProps(link)}>
@@ -118,9 +118,6 @@ export default function Hero() {
               </a>
             ))}
           </nav>
-          <a className="hero__cta" href="#download">
-            Download
-          </a>
           <button
             ref={toggleRef}
             type="button"

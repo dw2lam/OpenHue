@@ -4,44 +4,44 @@
    ───────────────────────────────────────────────────────────── */
 .foot {
   border-top: 1px solid var(--line);
-  padding: clamp(28px, 3vw, 44px) var(--gutter) calc(clamp(24px, 2.6vw, 40px) + env(safe-area-inset-bottom, 0px));
+  padding: clamp(calc(28px * var(--s)), calc(3vw * var(--s)), calc(44px * var(--s))) var(--gutter) calc(clamp(calc(24px * var(--s)), calc(2.6vw * var(--s)), calc(40px * var(--s))) + env(safe-area-inset-bottom, 0px));
   background: var(--bg);
 }
 .foot__inner { max-width: var(--content-max); margin: 0 auto; }
 .foot__row {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px 32px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: calc(16px * var(--s)) calc(32px * var(--s));
 }
 .foot__brand {
-  display: inline-flex; align-items: center; gap: 14px; min-width: 0;
+  display: inline-flex; align-items: center; gap: calc(14px * var(--s)); min-width: 0;
   color: var(--text); text-decoration: none;
 }
-.foot__icon { width: 28px; height: 28px; flex: none; }
+.foot__icon { width: calc(28px * var(--s)); height: calc(28px * var(--s)); flex: none; }
 .foot__mark {
   font-family: var(--font-display); font-weight: 200;
-  font-size: clamp(16px, 1.2vw, 20px); letter-spacing: 0.16em; line-height: 1;
+  font-size: clamp(calc(16px * var(--s)), calc(1.2vw * var(--s)), calc(20px * var(--s))); letter-spacing: 0.16em; line-height: 1;
   transition: color 0.25s ease;
 }
 .foot__brand:hover .foot__mark { color: var(--text-dim); }
 .foot__tag {
   font-family: var(--font-mono); font-weight: 300;
-  font-size: clamp(10.5px, 0.74vw, 12.5px); letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: clamp(calc(10.5px * var(--s)), calc(0.74vw * var(--s)), calc(12.5px * var(--s))); letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--text-dimmer); line-height: 1.4;
 }
-.foot__links { display: inline-flex; align-items: center; gap: clamp(20px, 2.4vw, 40px); }
+.foot__links { display: inline-flex; align-items: center; gap: clamp(calc(20px * var(--s)), calc(2.4vw * var(--s)), calc(40px * var(--s))); }
 .foot__links a {
   font-family: var(--font-mono); font-weight: 400;
-  font-size: clamp(11px, 0.78vw, 13px); letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: clamp(calc(11px * var(--s)), calc(0.78vw * var(--s)), calc(13px * var(--s))); letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--text-dim); text-decoration: none; line-height: 1;
   transition: color 0.25s ease;
 }
 .foot__links a:hover { color: var(--text); }
 .foot__legal {
-  margin-top: 18px;
+  margin-top: calc(18px * var(--s));
   font-family: var(--font-display); font-weight: 300;
-  font-size: clamp(11.5px, 0.78vw, 14px); color: var(--text-dimmer); line-height: 1.5;
+  font-size: clamp(calc(11.5px * var(--s)), calc(0.78vw * var(--s)), calc(14px * var(--s))); color: var(--text-dimmer); line-height: 1.5;
 }
 
 @media (max-width: 720px) {
-  .foot__brand { flex-wrap: wrap; gap: 10px 14px; }
+  .foot__brand { flex-wrap: wrap; gap: calc(10px * var(--s)) calc(14px * var(--s)); }
   .foot__tag { flex-basis: 100%; }
 }

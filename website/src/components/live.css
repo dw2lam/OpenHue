@@ -30,7 +30,7 @@
 .lv-dial__arc { transition: stroke-dashoffset 0.9s linear; }
 .lv-dial__last.is-tick { animation: lv-tick 0.36s ease-out; }
 @keyframes lv-tick {
-  0% { filter: blur(3px); opacity: 0.35; }
+  0% { filter: blur(calc(3px * var(--s))); opacity: 0.35; }
   100% { filter: blur(0); opacity: 1; }
 }
 
@@ -42,7 +42,7 @@
   right: 0;
   top: 12.12%;
   bottom: 12.12%;
-  border-radius: 999px;
+  border-radius: calc(999px * var(--s));
   background: linear-gradient(90deg, #f0933d 0%, #f2a459 10%, #f3b375 20%, #f5c08f 30%, #f6cca3 40%, #f8d6b6 50%, #fadfc5 60%, #fae7d5 70%, #fdefe2 80%, #fef5ee 90%, #fffdf9 100%);
 }
 .lv-thumb,
@@ -54,7 +54,7 @@
   border-radius: 50%;
   border-style: solid;
   border-color: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px calc(3px * var(--s)) rgba(0, 0, 0, 0.35);
 }
 
 /* Bulb dots (sidebar / rows / popover) */
@@ -68,7 +68,7 @@
 @keyframes lv-pulse { 50% { opacity: 0.45; transform: scale(0.82); } }
 
 /* macOS switch replica */
-.lv-toggle { border-radius: 999px; background: #323436; transition: background 0.35s ease; }
+.lv-toggle { border-radius: calc(999px * var(--s)); background: #323436; transition: background 0.35s ease; }
 .lv-toggle.is-on { background: #397cf6; }
 .lv-toggle__knob {
   position: absolute;
@@ -98,7 +98,7 @@
 @keyframes lv-pb { 0%, 42% { opacity: 0; } 50%, 92% { opacity: 1; } 100% { opacity: 0; } }
 
 /* Fade progress bar */
-.lv-bar { border-radius: 999px; background: #313946; overflow: hidden; }
+.lv-bar { border-radius: calc(999px * var(--s)); background: #313946; overflow: hidden; }
 .lv-bar > span { position: absolute; inset: 0 auto 0 0; width: 15.6%; border-radius: inherit; background: #3478f6; }
 
 /* Ambient glows driven by the overlays */
