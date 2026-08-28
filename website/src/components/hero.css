@@ -291,11 +291,6 @@ body.menu-open { overflow: hidden; }
   width: min(100%, calc(980px * var(--s)));
 }
 
-@property --meet-a {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
 .hero__meet {
   position: relative;
   display: inline-flex;
@@ -305,27 +300,12 @@ body.menu-open { overflow: hidden; }
   line-height: 1;
   padding: calc(9px * var(--s)) calc(20px * var(--s)) calc(9px * var(--s)) calc(12px * var(--s));
   background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--line-strong);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
   backdrop-filter: blur(16px) saturate(130%);
   box-shadow: 0 10px 40px -20px rgba(0, 0, 0, 0.8);
   border-radius: 0;
 }
-/* Hue-coloured hairline: the only colour in the hero is light */
-.hero__meet::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  background: conic-gradient(from var(--meet-a), var(--hue-warm), var(--hue-sunset), var(--hue-magenta), var(--hue-blue), var(--hue-cyan), var(--hue-warm));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0.7;
-  animation: heroMeetSpin 12s linear infinite;
-  pointer-events: none;
-}
-@keyframes heroMeetSpin { to { --meet-a: 360deg; } }
 .hero__meet-icon {
   width: calc(30px * var(--s));
   height: auto;
