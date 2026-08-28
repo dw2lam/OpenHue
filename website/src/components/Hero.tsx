@@ -154,9 +154,6 @@ export default function Hero() {
 
       <header className={`hero__nav${scrolled ? ' is-scrolled' : ''}`}>
         <div className="hero__island">
-          <a className="hero__logo" href="#top" aria-label="OpenHue — top of page">
-            <img src="/icon.png" width="30" height="30" alt="" decoding="async" />
-          </a>
           <nav className="hero__links" aria-label="Primary" ref={linksRef}>
             <span
               className={`hero__pill${pill ? ' is-on' : ''}`}
