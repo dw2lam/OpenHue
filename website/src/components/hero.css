@@ -308,7 +308,7 @@ body.menu-open { overflow: hidden; }
   font-size: clamp(calc(42px * var(--s)), calc(6.4vw * var(--s)), calc(112px * var(--s)));
   letter-spacing: -0.025em;
   line-height: 0.98;
-  margin-top: clamp(calc(22px * var(--s)), calc(2.6vw * var(--s)), calc(40px * var(--s)));
+  margin-top: calc(4px * var(--s));
   max-width: 12ch;
   color: var(--text);
   text-wrap: balance;
