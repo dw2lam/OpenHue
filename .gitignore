@@ -10,3 +10,4 @@ CLAUDE.local.md
 # Derived icon artefacts (regenerate with Icon/build.sh)
 Icon/AppIcon.iconset/
 Icon/source/alternates/
+.vercel/

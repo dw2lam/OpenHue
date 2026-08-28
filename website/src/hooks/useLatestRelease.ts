@@ -11,12 +11,14 @@ export interface ReleaseInfo {
   dmgBytes?: number;
 }
 
+// Shown until the GitHub releases API answers (and if it can't be reached). Keep in step with
+// the newest tag so a rate-limited visitor still sees the current version.
 const FALLBACK: ReleaseInfo = {
-  version: '0.1.0',
+  version: '0.2.0',
   dmgUrl: `${REPO_URL}/releases/latest/download/OpenHue.dmg`,
   zipUrl: `${REPO_URL}/releases/latest/download/OpenHue.zip`,
   releaseUrl: `${REPO_URL}/releases/latest`,
-  dmgBytes: 4077361,
+  dmgBytes: 2846951,
 };
 
 let cached: ReleaseInfo | null = null;
