@@ -4,7 +4,7 @@
 
 A native macOS app that controls Philips Hue **Bluetooth** bulbs directly over BLE — no Hue Bridge, no cloud, no phone. Swift / SwiftUI / CoreBluetooth, macOS 14+.
 
-<p align="center"><img src="docs/screenshot-all-lights.png" width="720" alt="OpenHue — All Lights view"></p>
+<p align="center"><img src="docs/all-lights.png" width="720" alt="OpenHue — All Lights view"></p>
 
 ## What it is
 
@@ -29,8 +29,8 @@ Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses
     <td align="center"><b>Schedules</b> — stored on the bulb, fired by its own clock</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshot-timer.png" alt="Timer tab: the All Lights dial counting down in Sleep mode, 20-minute presets on Right and Left"></td>
-    <td><img src="docs/screenshot-schedules.png" alt="Schedules tab: on-the-bulb wake-up schedules for Right and Left"></td>
+    <td><img src="docs/timer.png" alt="Timer tab: the All Lights dial counting down in Sleep mode, 20-minute presets on Right and Left"></td>
+    <td><img src="docs/schedules.png" alt="Schedules tab: on-the-bulb wake-up schedules for Right and Left"></td>
   </tr>
   <tr>
     <td align="center"><b>Effects</b> — the bulb's own plus Police from this Mac</td>
@@ -96,7 +96,7 @@ The same steps are shown inside the app (Add Light → Pairing help, and in a li
 
 ## Timer
 
-<p align="center"><img src="docs/screenshot-timer.png" width="720" alt="Timer tab — the All Lights dial counting down in Sleep mode"></p>
+<p align="center"><img src="docs/timer.png" width="720" alt="Timer tab — the All Lights dial counting down in Sleep mode"></p>
 
 Going to bed? Open **Timer**, turn the dial (or tap **20m**, **1h**, **Custom…**), pick a mode and press **Start**. All Lights has its own timer and so does each bulb, so you can give the bedside lamp 20 minutes and leave the rest alone. While a timer runs the dial drains like a clock face and shows the exact switch-off time; **+5 min** pushes it out, **Cancel** stops it.
 
@@ -114,7 +114,7 @@ There are two kinds, side by side in the Schedules view.
 
 ### On the bulb
 
-<p align="center"><img src="docs/screenshot-schedules.png" width="720" alt="Schedules view — On the bulb sections for Right and Left listing the routines stored in each bulb"></p>
+<p align="center"><img src="docs/schedules.png" width="720" alt="Schedules view — On the bulb sections for Right and Left listing the routines stored in each bulb"></p>
 
 **Schedules → On the bulb → Add to Bulb** stores a schedule *inside the bulb*: a name, a time, and either *turn on* (brightness, warmth, optional fade-in up to 60 min) or *turn off*. The bulb keeps its own clock — OpenHue reads it on every connect and re-syncs it if it drifts by more than 20 s — and fires the schedule by itself, with the Mac asleep and the phone away. Routines created in the Hue phone app show up in the same list and can be armed, disarmed and deleted from here.
 
