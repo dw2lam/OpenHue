@@ -17,7 +17,9 @@ Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses
 - **Police** effect — red/blue strobe driven by the Mac, alternating between bulbs like a light bar (Effects tab → "From this Mac"); any manual change stops it and restores the previous state.
 - "All lights" controls, plus a menu-bar extra for quick access.
 - Scenes: Hue's stock scenes (Bright, Relax, Energize, Savanna Sunset, …) and your own snapshots ("Save current as scene…").
+- **Timer** tab: a rotary time dial (one turn = an hour, keep turning for more) with 5 min … 8 h presets and a custom entry — one countdown for All Lights and one per bulb. **Timer** mode switches the lights off at the end (with a short fade-out); **Sleep** mode dims them gradually over the whole countdown, like a real sleep timer. Survives a relaunch and keeps the Mac awake until it fires.
 - Schedules: weekly or one-off, turn on/off, **wake-up fade-in** and **go-to-sleep fade-out**, targeting all lights or a subset.
+- **Schedules stored on the bulb**: OpenHue writes wake-up / turn-off schedules into the bulb's own memory, where they fire on the bulb's clock with no Mac and no phone around — and it shows, arms, disarms and deletes the routines the Hue app created. First third-party client to do this (the "MAC-protected" create packet turned out to carry a plain UUID v4).
 - Launch at login, keep-the-Mac-awake assertion, and an optional `pmset` scheduled wake so a laptop can run a morning schedule.
 - Diagnostics view: raw characteristic dump, raw read/write, power-on default, live log.
 
@@ -25,7 +27,7 @@ Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses
 
 - **Bluetooth range.** Bulbs must be within BLE range of the Mac (a room or two; walls hurt).
 - **One connected device per bulb.** While this app is connected the Hue phone app can't reach the bulb, and vice versa. Use *Disconnect All* (Settings → Data, or the menu bar) to hand a bulb over.
-- **No on-bulb schedules.** Hue bulbs only accept schedules created by the official app (the request is MAC-protected). Schedules in OpenHue run on the Mac — see [Schedules](#schedules).
+- **Bulb schedules are one-shot.** The bulb disarms a schedule after it fires (the Hue app quietly re-arms its routines every time it connects). OpenHue does the same with **Re-arm every day** — it only needs to connect once between two occurrences. See [Schedules](#schedules).
 - **Bridge-joined bulbs are unsupported.** Once a bulb has joined a Hue Bridge (Zigbee) its Bluetooth control is disabled. Remove it from the Bridge or factory-reset it.
 - **Renaming is best effort.** The name is stored locally and also written to the bulb's name characteristic, which some firmware ignores.
 
@@ -73,9 +75,33 @@ If the dialog never appears or pairing fails, the bulb is still bonded to your p
 
 The same steps are shown inside the app (Add Light → Pairing help, and in a light's detail view when pairing stalls).
 
+## Timer
+
+![Timer tab — rotary dial, Timer/Sleep modes, one countdown per bulb](docs/screenshot-timer.png)
+
+Going to bed? Open **Timer**, turn the dial (or tap **20m**, **1h**, **Custom…**), pick a mode and press **Start**. All Lights has its own timer and so does each bulb, so you can give the bedside lamp 20 minutes and leave the rest alone. While a timer runs the dial drains like a clock face and shows the exact switch-off time; **+5 min** pushes it out, **Cancel** stops it.
+
+- **Timer** leaves the lights as they are and switches them off when the countdown ends, after the short **Fade out** you choose at the top of the page (off / 30 s / 1 min / 5 min / 15 min / 30 min; also in Settings → Schedules).
+- **Sleep** starts dimming right away and takes the whole countdown to reach the minimum, then switches off — a real sleep timer for drifting off. Touching a light's controls during a fade stops the fade, not the timer.
+- The timer runs on this Mac like schedules do, but it also holds a *keep-awake* assertion until it fires (Settings → Schedules to turn that off), so an idle Mac won't doze off before the lights do.
+- Timers are saved to disk: quit and relaunch, and the countdown carries on. A deadline that passed while OpenHue wasn't running still switches the lights off if it is less than 30 minutes old; older ones are dropped so a stale bedtime timer can't kill the lights the next morning.
+- The menu bar extra has an **Off in…** shortcut for All Lights and shows the live countdown.
+
 ## Schedules
 
-Third-party apps can't store schedules on the bulb, so OpenHue runs them **on this Mac**. For a schedule to fire:
+There are two kinds, side by side in the Schedules view.
+
+### On the bulb
+
+**Schedules → On the bulb → Add to Bulb** stores a schedule *inside the bulb*: a name, a time, and either *turn on* (brightness, warmth, optional fade-in up to 60 min) or *turn off*. The bulb keeps its own clock — OpenHue reads it on every connect and re-syncs it if it drifts by more than 20 s — and fires the schedule by itself, with the Mac asleep and the phone away. Routines created in the Hue phone app show up in the same list and can be armed, disarmed and deleted from here.
+
+- A bulb schedule fires **once** and is then disarmed by the bulb. Leave **Re-arm every day** on and OpenHue arms it for the next day whenever it is connected (a wake-up that fired at 07:00 is re-armed for tomorrow the moment OpenHue next sees the bulb).
+- A power cut stops the bulb's clock; OpenHue sets it again on the next connect, so keep *Keep lights connected* on if you rely on bulb schedules.
+- Diagnostics has a **Test storage** button that stores a disarmed test schedule, reads it back and deletes it.
+
+### On this Mac
+
+Weekly or one-off schedules with fades and scenes run **on this Mac**. For one of those to fire:
 
 - the Mac must be **awake** (not sleeping; the display may be off),
 - **OpenHue must be running** — turn on **Launch at login** (Settings → General),
@@ -95,7 +121,7 @@ The plan is to make these Bluetooth-only bulbs first-class devices on a home ser
 
 ## Data location
 
-Everything lives in `~/Library/Application Support/OpenHue/` as plain JSON (`lights.json`, `scenes.json`, `schedules.json`, `settings.json`), written atomically. Settings → Data → **Open folder** reveals it. Deleting the folder resets the app; the Bluetooth bonds themselves live in macOS (System Settings → Bluetooth).
+Everything lives in `~/Library/Application Support/OpenHue/` as plain JSON (`lights.json`, `scenes.json`, `schedules.json`, `sleep-timers.json`, `settings.json`), written atomically. Settings → Data → **Open folder** reveals it. Deleting the folder resets the app; the Bluetooth bonds themselves live in macOS (System Settings → Bluetooth).
 
 ## Troubleshooting
 
@@ -131,8 +157,21 @@ Other services:
 |---|---|---|
 | Device configuration | `FE0F` | name `97fe6561-0003-4f62-86e9-b71ee2da3d22` (ASCII, R/W best effort), Zigbee address `97fe6561-0001-…` (8 bytes), pairing control `97fe6561-2001-…` |
 | Device Information | `180A` | manufacturer `2A29`, model `2A24`, firmware `2A28` |
-| On-bulb alarms | `9da2ddf1-0001-44d0-909c-3f3d3cb34a7b` | list / enable / disable / delete only; creation is MAC-protected |
+| Bulb clock | `97fe6561-1001-…` | `uint32` LE Unix epoch seconds (UTC); R/W/Notify. Undocumented until now — found by reading every characteristic and spotting the one that equals `date +%s`. The alarm timestamps below are compared against it |
+| On-bulb alarms | `9da2ddf1-0001-44d0-909c-3f3d3cb34a7b` | request/response over one Write+Notify characteristic — see below |
+
+Alarm requests: `00` list ids → `00 status ?? count id16…`; `02 id16 00 00` detail → `02 status id16 len 00 00 00 body`; `01 id16 body` write (`id16 = FFFF` creates; ack `01 status FFFF newId16`, then a `04 …` commit notification); `03 id16` delete → `03 status id16`, then `04 id16 FF FF`. Body layout:
+
+```
+[flag][enabled][kind][fireAt u32 LE]          kind 0 = routine, 1 = countdown timer
+[actionType][len][action…]                    0 = light-state TLV as in 0007 (+ tag 05 = transition in 100 ms units), 1 = one-byte code
+[blockLen][01][uuid 16 bytes]                 blockLen counts from the 01 to the end
+[trailerType][u32 LE]                         00 FFFFFFFF = none, 03 seconds = countdown duration
+[nameLen][name][trailing = enabled]
+```
+
+The 16 bytes were assumed for years to be an app-generated MAC that made creation impossible. Every captured sample has the RFC 4122 version-4 nibble and variant bits: it is a client-minted **UUID v4**, nothing more. OpenHue mints one per schedule and the bulb stores it (verified on LCA003 firmware 1.163.1). Routine timestamps are the *start of the fade*, not the target time.
 
 Effects (tag `06`): `01` candle, `02` fireplace, `03` prism, `0A` sparkle, `0B` opal, `0C` glisten, `0E` underwater, `0F` cosmos, `10` sunbeam, `11` enchant.
 
-Credit: the protocol was reverse-engineered by the community — chiefly [flip-dots/HueBLE](https://github.com/flip-dots/HueBLE) and [glyphack/huec](https://github.com/glyphack/huec), with macOS pairing notes from ai212983/blemacd. This project is not affiliated with Signify / Philips Hue.
+Credit: the protocol was reverse-engineered by the community — chiefly [flip-dots/HueBLE](https://github.com/flip-dots/HueBLE) and [glyphack/huec](https://github.com/glyphack/huec) (whose packet captures made the alarm layout and the UUID finding possible), with macOS pairing notes from ai212983/blemacd. This project is not affiliated with Signify / Philips Hue.

@@ -7,14 +7,7 @@ struct OpenHueApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        Window("OpenHue", id: "main") {
-            ContentView()
-                .environmentObject(model)
-        }
-        .defaultSize(width: 980, height: 640)
-        .commands {
-            CommandGroup(replacing: .newItem) {}
-        }
+        mainWindow
 
         MenuBarExtra("OpenHue", systemImage: "lightbulb") {
             MenuBarView()
@@ -29,11 +22,27 @@ struct OpenHueApp: App {
     }
 }
 
+extension OpenHueApp {
+    @SceneBuilder private var mainWindow: some Scene {
+        Window("OpenHue", id: "main") {
+            ContentView()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 980, height: 640)
+        .commands {
+            CommandGroup(replacing: .newItem) {}
+        }
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Set by `AppModel.init` (from `AppSettings.openWindowAtLaunch`) before `applicationDidFinishLaunching` runs.
     /// nil = unknown, in which case the setting is read straight from the store.
     static var shouldHideWindowAtLaunch: Bool?
+    /// `openWindow(id: "main")`, captured by the views so a Dock click / `open -a` can bring the
+    /// window back after it was closed (SwiftUI's own reopen handling is bypassed by this delegate).
+    static var openMainWindow: (() -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let asLoginItem = Self.launchedAsLoginItem()
@@ -54,8 +63,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        if !hasVisibleWindows, let window = Self.mainWindow() {
-            window.makeKeyAndOrderFront(nil)
+        if !hasVisibleWindows {
+            if let window = Self.mainWindow() {
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                Self.openMainWindow?()
+            }
         }
         NSApp.activate(ignoringOtherApps: true)
         return true

@@ -10,6 +10,7 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             allLightsRow
+            sleepTimerRow
             if !model.lights.isEmpty {
                 Divider()
                 VStack(spacing: 6) {
@@ -25,6 +26,7 @@ struct MenuBarView: View {
         }
         .padding(14)
         .frame(width: 340)
+        .onAppear { AppDelegate.openMainWindow = { openWindow(id: "main") } }
     }
 
     // MARK: Sections
@@ -71,6 +73,51 @@ struct MenuBarView: View {
                 .disabled(model.lights.isEmpty)
         }
         .opacity(model.readyLights.isEmpty ? 0.6 : 1)
+    }
+
+    private var sleepTimerRow: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "timer")
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+            Text("Timer")
+                .fontWeight(.medium)
+            Spacer(minLength: 8)
+            if let timer = model.sleepTimers.timer(for: .allLights) {
+                if timer.mode == .dimToSleep {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.caption)
+                        .foregroundStyle(.indigo)
+                        .help("Sleep: dimming down, then off")
+                }
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(SleepTimerRunner.countdownText(timer.remaining(at: context.date)))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Button("Cancel") { model.sleepTimers.cancel(.allLights) }
+                    .controlSize(.small)
+            } else {
+                Menu("Off in…") {
+                    ForEach([5, 10, 15, 30, 60, 120], id: \.self) { minutes in
+                        Button(SleepTimerRunner.durationText(TimeInterval(minutes) * 60)) {
+                            model.startSleepTimer(.allLights, minutes: minutes)
+                        }
+                    }
+                    Divider()
+                    Section("Sleep in…") {
+                        ForEach([15, 30, 45, 60], id: \.self) { minutes in
+                            Button(SleepTimerRunner.durationText(TimeInterval(minutes) * 60)) {
+                                model.startSleepTimer(.allLights, minutes: minutes, mode: .dimToSleep)
+                            }
+                        }
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .disabled(model.lights.isEmpty)
+            }
+        }
     }
 
     private var scenesRow: some View {

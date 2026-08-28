@@ -11,7 +11,7 @@ Everything OpenHue does is plain BLE GATT (see the protocol table in the README)
 - **One connected central per bulb.** Whoever holds the link (Mac, server, phone) is the only controller at that moment. The bridge must be the single owner and everything else talks *to the bridge*, not to the bulb.
 - **Bonds are per adapter.** The server pairs once (bulb made discoverable from the Hue app → Make Discoverable, exactly as with the Mac); the phone app keeps working.
 - **BLE range.** The server must be within a room or two. A cheap USB BLE dongle or a Raspberry Pi acting as a satellite bridge covers other rooms.
-- **No on-bulb schedules for third parties.** Schedules/automations run on the server — which is where they belong anyway.
+- **Bulb schedules are one-shot.** The bulb stores schedules and fires them on its own clock (OpenHue can create them — the create packet's "MAC" is a UUID v4), but disarms each one after it fires. The bridge re-arms daily ones whenever it connects, exactly as the app does.
 
 ## Phases
 
@@ -34,7 +34,8 @@ When a bridge is present on the network, the Mac app switches from "I own the bu
 ### 5. Nice-to-haves
 - Multiple bridges / satellites for range, with the app picking the nearest.
 - Matter bridge (matter.js) as an alternative to Homebridge once Matter-over-bridge support is stable.
-- On-bulb alarm passthrough (list / enable / disable the ones the Hue app created).
+- Expose bulb-stored schedules through the bridge API (create / arm / disarm / delete) so HomeKit automations can survive the server being down.
+- Figure out the remaining alarm fields: trailer types other than `00`/`03` (weekday repeat mask?), the countdown "simple" action codes, and effect `09` (sunrise) as a directly writable effect.
 - Light groups and entertainment-style synced effects across many bulbs.
 
 ## Near-term app items

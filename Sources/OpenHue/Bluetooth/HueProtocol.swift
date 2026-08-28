@@ -32,6 +32,10 @@ enum HueUUID {
     static let zigbeeAddress  = CBUUID(string: "97FE6561-0001-4F62-86E9-B71EE2DA3D22")
     /// ASCII light name. Read + Write (write is untested by the community — best effort only).
     static let name           = CBUUID(string: "97FE6561-0003-4F62-86E9-B71EE2DA3D22")
+    /// Bulb real-time clock: uint32 LE Unix epoch seconds (UTC), Read/Write/Notify. The on-bulb
+    /// alarms compare against it, so OpenHue re-syncs it whenever it drifts. (Found by probing —
+    /// undocumented anywhere public as of 2026-08.)
+    static let clock          = CBUUID(string: "97FE6561-1001-4F62-86E9-B71EE2DA3D22")
     /// Reads 0x0A; "write 01 to enable pairing requests" per blemacd. Unverified.
     static let pairingControl = CBUUID(string: "97FE6561-2001-4F62-86E9-B71EE2DA3D22")
 
@@ -40,21 +44,22 @@ enum HueUUID {
     static let model          = CBUUID(string: "2A24")
     static let firmware       = CBUUID(string: "2A28")
 
-    /// On-bulb alarm request/response channel (Write + Notify). Creation is MAC-protected; only
-    /// list / detail / enable / disable / delete are possible.
+    /// On-bulb alarm request/response channel (Write + Notify) — see `HueAlarm`.
     static let alarm          = CBUUID(string: "9DA2DDF1-0001-44D0-909C-3F3D3CB34A7B")
 
-    /// Characteristics we subscribe to for push state updates.
-    static let notifyCharacteristics: [CBUUID] = [power, brightness, colorTemp, colorXY, combined]
+    /// Characteristics we subscribe to for push state updates (+ the alarm response channel).
+    static let notifyCharacteristics: [CBUUID] = [power, brightness, colorTemp, colorXY, combined, alarm]
 
     /// Reads issued once the link is encrypted (after the initial `power` read succeeded).
-    static let initialReads: [CBUUID] = [combined, capabilities, powerOnDefault, manufacturer, model, firmware, name]
+    static let initialReads: [CBUUID] = [combined, capabilities, powerOnDefault, manufacturer, model, firmware, name, clock]
 
     static func label(_ uuid: CBUUID) -> String {
         switch uuid {
         case signify: return "Signify config service"
         case lightService: return "Light service"
         case capabilities: return "Capabilities (0001)"
+        case clock: return "Clock (1001)"
+        case alarm: return "Alarms (9da2ddf1)"
         case power: return "Power (0002)"
         case brightness: return "Brightness (0003)"
         case colorTemp: return "Color temperature (0004)"

@@ -10,6 +10,7 @@ final class AppModel: ObservableObject, SchedulerContext {
         case allLights
         case light(UUID)
         case scenes
+        case sleepTimer
         case schedules
         case diagnostics
     }
@@ -19,6 +20,7 @@ final class AppModel: ObservableObject, SchedulerContext {
     let fadeRunner: FadeRunner
     let appEffects = AppEffectRunner()
     let scheduler: Scheduler
+    let sleepTimers: SleepTimerRunner
 
     /// Presets (`Presets.all`) first, then user scenes. Only user scenes are persisted.
     @Published var scenes: [HueScene] { didSet { scheduleSave(.scenes) } }
@@ -32,6 +34,7 @@ final class AppModel: ObservableObject, SchedulerContext {
     private var cancellables = Set<AnyCancellable>()
     /// Per-light `objectWillChange` forwarders, keyed by light id (rebuilt whenever the list changes).
     private var lightCancellables: [UUID: AnyCancellable] = [:]
+    private var alarmCancellables: [UUID: AnyCancellable] = [:]
     private var pendingSaves: [Store.File: Task<Void, Never>] = [:]
     private var sleepAssertion: PowerManagement.SleepAssertion?
     private var wakeObserver: PowerManagement.WakeObserver?
@@ -57,11 +60,15 @@ final class AppModel: ObservableObject, SchedulerContext {
         let fadeRunner = FadeRunner()
         self.fadeRunner = fadeRunner
         self.scheduler = Scheduler(fadeRunner: fadeRunner)
+        self.sleepTimers = SleepTimerRunner(fadeRunner: fadeRunner)
 
         AppDelegate.shouldHideWindowAtLaunch = !settings.openWindowAtLaunch
         hueLog("AppModel: loaded \(known.count) light(s), \(userScenes.count) user scene(s), \(schedules.count) schedule(s)")
 
         scheduler.context = self
+        sleepTimers.resolveLights = { [weak self] target in self?.lights(for: target) ?? [] }
+        sleepTimers.onChange = { [weak self] in self?.scheduleSave(.sleepTimers) }
+        sleepTimers.keepsMacAwake = settings.keepMacAwakeForSleepTimers
 
         // Persist the light list whenever the central reports a change.
         central.onLightsChanged = { [weak self] in self?.scheduleSave(.lights) }
@@ -84,6 +91,9 @@ final class AppModel: ObservableObject, SchedulerContext {
         appEffects.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &cancellables)
+        sleepTimers.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
 
         // Make sure nothing debounced is lost when the app quits.
         NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
@@ -101,10 +111,31 @@ final class AppModel: ObservableObject, SchedulerContext {
 
         central.start()
         scheduler.start()
+        let savedTimers: [SleepTimer] = store.load(.sleepTimers, default: [])
+        sleepTimers.restore(savedTimers)
+
+        // Developer hook: OPENHUE_ALARM_SELFTEST=<seconds> (or 0 for a disarmed store/delete test),
+        // optional OPENHUE_ALARM_SELFTEST_LIGHT=<name>.
+        if let raw = ProcessInfo.processInfo.environment["OPENHUE_ALARM_SELFTEST"] {
+            let seconds = TimeInterval(raw) ?? 0
+            let wanted = ProcessInfo.processInfo.environment["OPENHUE_ALARM_SELFTEST_LIGHT"]
+            Task { @MainActor [weak self] in
+                for _ in 0..<120 {
+                    try? await Task.sleep(for: .seconds(1))
+                    guard let self else { return }
+                    let candidates = self.lights.filter { $0.connection.isReady && $0.alarms.lastRefreshed != nil }
+                    if let light = candidates.first(where: { wanted == nil || $0.name == wanted }) {
+                        self.testOnBulbStorage(light: light, fireIn: seconds > 5 ? seconds : nil)
+                        return
+                    }
+                }
+            }
+        }
     }
 
     private func wire(_ lights: [HueLight]) {
         var forwarders: [UUID: AnyCancellable] = [:]
+        var alarmWatchers: [UUID: AnyCancellable] = [:]
         for light in lights {
             light.onUserWrite = { [weak self] light in
                 self?.fadeRunner.cancel(light: light)
@@ -112,8 +143,104 @@ final class AppModel: ObservableObject, SchedulerContext {
             }
             forwarders[light.id] = light.objectWillChange
                 .sink { [weak self] _ in self?.objectWillChange.send() }
+            alarmWatchers[light.id] = light.alarms.$alarms
+                .sink { [weak self, weak light] alarms in
+                    guard let self, let light else { return }
+                    self.rearmRepeatingAlarms(alarms, on: light)
+                }
         }
         lightCancellables = forwarders
+        alarmCancellables = alarmWatchers
+    }
+
+    // MARK: - On-bulb alarms
+
+    func isRepeating(_ uuid: UUID) -> Bool { settings.repeatingBulbAlarms.contains(uuid) }
+
+    func setRepeating(_ uuid: UUID, _ on: Bool, light: HueLight? = nil) {
+        updateSettings { if on { $0.repeatingBulbAlarms.insert(uuid) } else { $0.repeatingBulbAlarms.remove(uuid) } }
+        if on, let light { rearmRepeatingAlarms(light.alarms.alarms, on: light) }
+    }
+
+    func createOnBulbAlarm(_ alarm: HueAlarm, on light: HueLight, repeatsDaily: Bool) {
+        if repeatsDaily { setRepeating(alarm.uuid, true) }
+        hueLog("On-bulb alarm “\(alarm.name)” → \(light.name), fires \(alarm.fireAt)\(repeatsDaily ? ", re-armed daily" : "")")
+        light.alarms.create(alarm)
+    }
+
+    func deleteOnBulbAlarm(_ alarm: HueAlarm, on light: HueLight) {
+        setRepeating(alarm.uuid, false)
+        light.alarms.delete(alarm)
+    }
+
+    /// Latest line of the storage self-test per light (Diagnostics).
+    @Published private(set) var onBulbTestReport: [UUID: String] = [:]
+
+    /// Creates a test schedule on `light`, reads it back and deletes it. With `fireIn` it is armed
+    /// for that many seconds ahead with the light's *current* state as its action (nothing visible
+    /// happens) and the test waits to see the bulb fire and disarm it on its own clock.
+    func testOnBulbStorage(light: HueLight, fireIn: TimeInterval?) {
+        let state = light.state
+        let action = HueAlarm.lightStateAction(on: state.on, brightness: state.brightness, color: state.color)
+        let fireAt = Date().addingTimeInterval(fireIn ?? 3600)
+        let alarm = HueAlarm.make(name: "OpenHue test", fireAt: fireAt, action: action, enabled: fireIn != nil)
+        report(light, "Creating test schedule \(alarm.uuid.uuidString.lowercased()) (\(fireIn == nil ? "disarmed" : "fires \(fireAt)"))…")
+        light.alarms.create(alarm)
+
+        Task { @MainActor [weak self, weak light] in
+            guard let self, let light else { return }
+            var stored: HueAlarm?
+            for _ in 0..<25 {
+                try? await Task.sleep(for: .seconds(1))
+                if let found = light.alarms.alarms.first(where: { $0.uuid == alarm.uuid }) { stored = found; break }
+                if let outcome = light.alarms.lastOutcome, outcome.isError, outcome.at > fireAt.addingTimeInterval(-(fireIn ?? 3600)) { break }
+            }
+            guard let stored else {
+                self.report(light, "❌ The bulb did not store the test schedule: \(light.alarms.lastOutcome?.message ?? "no answer")")
+                return
+            }
+            let same = stored.encodeBody() == alarm.encodeBody()
+            self.report(light, "✅ Stored as slot \(stored.id): \(OnBulbText.action(stored)) · \(OnBulbText.fires(stored)) — read-back \(same ? "identical" : "differs: \(stored.encodeBody().hexString)")")
+            guard let fireIn else {
+                light.alarms.delete(stored)
+                self.report(light, "✅ Deleted it again — this bulb stores schedules.")
+                return
+            }
+            let wait = max(5, fireIn + 25)
+            self.report(light, "Waiting \(Int(wait)) s for the bulb to fire it on its own clock…")
+            try? await Task.sleep(for: .seconds(wait))
+            light.alarms.refresh()
+            for _ in 0..<20 {
+                try? await Task.sleep(for: .seconds(1))
+                if !light.alarms.isBusy { break }
+            }
+            if let after = light.alarms.alarms.first(where: { $0.uuid == alarm.uuid }) {
+                if after.isEnabled {
+                    self.report(light, "❌ Still armed \(Int(Date().timeIntervalSince(fireAt))) s after its time — the bulb did not fire it (clock offset \(light.clockOffset.map { String(format: "%+.0f", $0) } ?? "?") s)")
+                } else {
+                    self.report(light, "✅ The bulb fired it and disarmed it itself — on-bulb schedules work.")
+                }
+                light.alarms.delete(after)
+            } else {
+                self.report(light, "⚠️ The test schedule vanished after its time (the bulb may delete fired one-shots).")
+            }
+        }
+    }
+
+    private func report(_ light: HueLight, _ text: String) {
+        hueLog("[\(light.name)] bulb storage test: \(text)")
+        onBulbTestReport[light.id] = text
+    }
+
+    /// The bulb disarms an alarm after it fires; alarms marked "daily" are armed again for the next
+    /// occurrence whenever the list comes back with them disarmed and in the past.
+    private func rearmRepeatingAlarms(_ alarms: [HueAlarm], on light: HueLight) {
+        let now = Date()
+        for alarm in alarms
+        where settings.repeatingBulbAlarms.contains(alarm.uuid) && !alarm.isEnabled && !alarm.isTimer && alarm.fireAt < now {
+            hueLog("On-bulb alarm “\(alarm.name)” on \(light.name) fired — re-arming for the next day")
+            light.alarms.setEnabled(alarm, true)
+        }
     }
 
     // MARK: - Lights
@@ -179,6 +306,7 @@ final class AppModel: ObservableObject, SchedulerContext {
         guard new.id != oldID else { return }
         hueLog("Replaced light \(old.name): \(oldID) → \(new.id)")
         migrateReferences(from: oldID, to: new.id)
+        sleepTimers.migrate(lightID: oldID, to: new.id)
         if selection == .light(oldID) { selection = .light(new.id) }
     }
 
@@ -186,6 +314,7 @@ final class AppModel: ObservableObject, SchedulerContext {
         hueLog("Forgot light \(light.name) (\(light.id))")
         fadeRunner.cancel(light: light)
         appEffects.cancel(light: light)
+        sleepTimers.cancel(.light(light.id))
         central.forget(light)
         // Drop references so a user scene doesn't keep a dead entry and a schedule that targeted
         // only this light doesn't silently become "all lights" (empty targets).
@@ -325,6 +454,23 @@ final class AppModel: ObservableObject, SchedulerContext {
         scheduler.runNow(schedule)
     }
 
+    // MARK: - Sleep timers
+
+    func lights(for target: SleepTimer.Target) -> [HueLight] {
+        switch target {
+        case .allLights: return lights
+        case .light(let id): return light(id: id).map { [$0] } ?? []
+        }
+    }
+
+    /// Starts (or replaces) a countdown for `target`: `.switchOff` keeps the lights as they are and
+    /// switches them off at the end (after the configured `sleepTimerFadeSeconds` fade-out);
+    /// `.dimToSleep` ramps the brightness down over the whole countdown, then off.
+    func startSleepTimer(_ target: SleepTimer.Target, minutes: Int, mode: SleepTimer.Mode = .switchOff) {
+        let duration = TimeInterval(max(1, minutes)) * 60
+        sleepTimers.start(target, duration: duration, fadeSeconds: settings.sleepTimerFadeSeconds, mode: mode)
+    }
+
     // MARK: - Settings
 
     /// Mutates a copy of the settings, applies the side effects of whatever changed, then persists.
@@ -339,6 +485,7 @@ final class AppModel: ObservableObject, SchedulerContext {
 
     private func applySideEffects(from old: AppSettings?, to new: AppSettings) {
         central.keepAlive = new.keepLightsConnected
+        sleepTimers.keepsMacAwake = new.keepMacAwakeForSleepTimers
 
         if new.keepMacAwakeWhileRunning {
             if sleepAssertion == nil {
@@ -445,6 +592,7 @@ final class AppModel: ObservableObject, SchedulerContext {
         case .scenes: store.save(userScenes, to: .scenes)
         case .schedules: store.save(schedules, to: .schedules)
         case .settings: store.save(settings, to: .settings)
+        case .sleepTimers: store.save(sleepTimers.timers, to: .sleepTimers)
         }
     }
 

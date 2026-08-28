@@ -217,4 +217,112 @@ struct AppSettings: Codable, Equatable {
     /// `pmset repeat wakeorpoweron` entry managed by the app.
     var wakeMac: WakeMacSetting = WakeMacSetting()
     var openWindowAtLaunch: Bool = true
+    /// Sleep timers fade the lights down over this many seconds before switching off (0 = off instantly).
+    var sleepTimerFadeSeconds: TimeInterval = 60
+    /// Hold a system-sleep assertion while a sleep timer is counting down.
+    var keepMacAwakeForSleepTimers: Bool = true
+    /// On-bulb alarms (by their UUID) that OpenHue re-arms for the next day after they fire.
+    var repeatingBulbAlarms: Set<UUID> = []
+
+    init() {}
+
+    // Tolerant decoding: settings added in later versions fall back to their defaults instead of
+    // failing the whole file (which would silently reset every setting).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? launchAtLogin
+        keepLightsConnected = try c.decodeIfPresent(Bool.self, forKey: .keepLightsConnected) ?? keepLightsConnected
+        keepMacAwakeWhileRunning = try c.decodeIfPresent(Bool.self, forKey: .keepMacAwakeWhileRunning) ?? keepMacAwakeWhileRunning
+        missedGraceOnMinutes = try c.decodeIfPresent(Int.self, forKey: .missedGraceOnMinutes) ?? missedGraceOnMinutes
+        missedGraceOffHours = try c.decodeIfPresent(Int.self, forKey: .missedGraceOffHours) ?? missedGraceOffHours
+        wakeMac = try c.decodeIfPresent(WakeMacSetting.self, forKey: .wakeMac) ?? wakeMac
+        openWindowAtLaunch = try c.decodeIfPresent(Bool.self, forKey: .openWindowAtLaunch) ?? openWindowAtLaunch
+        sleepTimerFadeSeconds = try c.decodeIfPresent(TimeInterval.self, forKey: .sleepTimerFadeSeconds) ?? sleepTimerFadeSeconds
+        keepMacAwakeForSleepTimers = try c.decodeIfPresent(Bool.self, forKey: .keepMacAwakeForSleepTimers) ?? keepMacAwakeForSleepTimers
+        repeatingBulbAlarms = try c.decodeIfPresent(Set<UUID>.self, forKey: .repeatingBulbAlarms) ?? repeatingBulbAlarms
+    }
+}
+
+// MARK: - Sleep timers
+
+/// A one-shot countdown, run by this Mac, that switches lights off when it ends (fading first if
+/// `fadeSeconds` > 0). One per target; persisted so a relaunch picks it back up.
+struct SleepTimer: Codable, Identifiable, Equatable, Hashable {
+    enum Target: Codable, Equatable, Hashable {
+        case allLights
+        case light(UUID)
+
+        var lightID: UUID? {
+            if case .light(let id) = self { return id }
+            return nil
+        }
+    }
+
+    enum Mode: String, Codable, Equatable, Hashable, CaseIterable, Identifiable {
+        /// Plain timer: lights stay as they are, then switch off (after the short fade-out setting).
+        case switchOff
+        /// Sleep timer: brightness ramps down over the whole countdown, then off.
+        case dimToSleep
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .switchOff: return "Timer"
+            case .dimToSleep: return "Sleep"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .switchOff: return "timer"
+            case .dimToSleep: return "moon.zzz"
+            }
+        }
+    }
+
+    var id: UUID = UUID()
+    var target: Target
+    var mode: Mode = .switchOff
+    var startedAt: Date
+    var endsAt: Date
+    /// Seconds of fade-down at the end of the countdown (0 = switch off instantly). Equals the
+    /// whole duration for `.dimToSleep`.
+    var fadeSeconds: TimeInterval = 0
+
+    init(id: UUID = UUID(), target: Target, mode: Mode = .switchOff, startedAt: Date, endsAt: Date, fadeSeconds: TimeInterval = 0) {
+        self.id = id
+        self.target = target
+        self.mode = mode
+        self.startedAt = startedAt
+        self.endsAt = endsAt
+        self.fadeSeconds = fadeSeconds
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, target, mode, startedAt, endsAt, fadeSeconds }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        target = try c.decode(Target.self, forKey: .target)
+        mode = try c.decodeIfPresent(Mode.self, forKey: .mode) ?? .switchOff
+        startedAt = try c.decode(Date.self, forKey: .startedAt)
+        endsAt = try c.decode(Date.self, forKey: .endsAt)
+        fadeSeconds = try c.decodeIfPresent(TimeInterval.self, forKey: .fadeSeconds) ?? 0
+    }
+
+    var duration: TimeInterval { max(0, endsAt.timeIntervalSince(startedAt)) }
+
+    func remaining(at now: Date) -> TimeInterval { max(0, endsAt.timeIntervalSince(now)) }
+
+    /// 1 at the start, 0 when done.
+    func fraction(at now: Date) -> Double {
+        guard duration > 0 else { return 0 }
+        return min(1, max(0, remaining(at: now) / duration))
+    }
+
+    /// The fade-down window has begun.
+    func isFading(at now: Date) -> Bool {
+        fadeSeconds > 0 && now >= endsAt.addingTimeInterval(-fadeSeconds) && now < endsAt
+    }
 }

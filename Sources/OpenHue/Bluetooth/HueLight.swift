@@ -1,5 +1,6 @@
 import Foundation
 import CoreBluetooth
+import Combine
 
 struct CharacteristicInfo: Identifiable, Equatable {
     let service: CBUUID
@@ -99,6 +100,14 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
     @Published private(set) var lastError: String?
     @Published private(set) var characteristics: [CharacteristicInfo] = []
     @Published private(set) var rawValues: [CBUUID: Data] = [:]
+    /// Alarms stored on the bulb itself (list / arm / disarm / delete / create).
+    let alarms = HueAlarmClient()
+    /// Bulb clock minus Mac clock at the last read (nil until read). Re-synced automatically past `clockTolerance`.
+    @Published private(set) var clockOffset: TimeInterval?
+    static let clockTolerance: TimeInterval = 20
+    private var alarmCancellable: AnyCancellable?
+    /// One-off exploratory reads of undocumented characteristics (logged, never acted on).
+    private var probeReads: Set<CBUUID> = []
 
     /// When true the central keeps a pending connect so the bulb reconnects whenever it reappears.
     var wantsConnection = true
@@ -191,6 +200,9 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
         self.info = info
         self.state = info.lastState ?? .default
         super.init()
+        alarms.send = { [weak self] data in self?.enqueue(HueUUID.alarm, data) }
+        alarms.log = { [weak self] message, level in self?.log("alarms: " + message, level) }
+        alarmCancellable = alarms.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
     }
 
     // MARK: - Commands
@@ -308,6 +320,18 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
 
     func setPowerOnDefault(_ state: LightState) {
         enqueue(HueUUID.powerOnDefault, state.encodePowerOnDefault())
+    }
+
+    /// Writes this Mac's UTC time into the bulb's clock (`1001`) so on-bulb alarms fire on time.
+    func syncClock() {
+        guard charMap[HueUUID.clock] != nil else {
+            log("syncClock: no clock characteristic on this bulb", .debug)
+            return
+        }
+        let now = UInt32(clamping: Int64(Date().timeIntervalSince1970.rounded()))
+        log("syncClock: setting bulb clock to \(Date()) (was \(clockOffset.map { String(format: "%+.0f s", $0) } ?? "unread"))", .info)
+        enqueue(HueUUID.clock, Data([UInt8(now & 0xFF), UInt8((now >> 8) & 0xFF), UInt8((now >> 16) & 0xFF), UInt8(now >> 24)]))
+        clockOffset = 0
     }
 
     // MARK: - Hooks used by HueCentral
@@ -668,6 +692,8 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
         outstandingReads.removeAll()
         initialReadsIssued = false
         awaitingCombinedForReady = false
+        probeReads.removeAll()
+        alarms.linkDropped()
         if !characteristics.isEmpty { characteristics = [] }
     }
 
@@ -747,6 +773,26 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
         readyWaiters.removeAll()
         for (_, continuation) in waiters { continuation.resume() }
         pump()
+        if charMap[HueUUID.alarm] == nil {
+            alarms.markUnsupported()
+        } else {
+            alarms.refresh()
+        }
+        probeUndocumentedCharacteristics()
+    }
+
+    /// Reads every readable characteristic we don't otherwise touch, once per link, and logs the
+    /// raw bytes at info level — how the clock characteristic (if any) will be found.
+    private func probeUndocumentedCharacteristics() {
+        guard probeReads.isEmpty else { return }
+        let known: Set<CBUUID> = Set(HueUUID.initialReads + HueUUID.notifyCharacteristics + [HueUUID.power, HueUUID.zigbeeAddress, HueUUID.alarm])
+        for (uuid, char) in charMap where char.properties.contains(.read) && !known.contains(uuid) {
+            probeReads.insert(uuid)
+            _ = issueRead(uuid)
+        }
+        if !probeReads.isEmpty {
+            log("probing \(probeReads.count) undocumented readable characteristic(s)", .debug)
+        }
     }
 
     private func enterPairing() {
@@ -874,7 +920,12 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
 
     private func handleValue(_ uuid: CBUUID, _ data: Data, wasRead: Bool) {
         rawValues[uuid] = data
-        log("\(wasRead ? "read" : "notify") \(HueUUID.label(uuid)) = \(data.hexString)", .debug)
+        log("\(wasRead ? "read" : "notify") \(HueUUID.label(uuid)) = \(data.hexString)", probeReads.contains(uuid) ? .info : .debug)
+        if uuid == HueUUID.alarm {
+            // Request/response channel: responses arrive as notifies, often before the write ack.
+            alarms.handleNotification(data)
+            return
+        }
 
         if !wasRead {
             let stale: Bool
@@ -956,6 +1007,16 @@ final class HueLight: NSObject, ObservableObject, Identifiable {
                 log("adopted the bulb's own name “\(value)”", .info)
             }
             if changed { notifyInfoChanged(immediate: true) }
+        case HueUUID.clock:
+            guard data.count >= 4 else { break }
+            let b = [UInt8](data)
+            let epoch = UInt32(b[0]) | UInt32(b[1]) << 8 | UInt32(b[2]) << 16 | UInt32(b[3]) << 24
+            let offset = TimeInterval(epoch) - Date().timeIntervalSince1970
+            clockOffset = offset
+            log("clock (1001): \(Date(timeIntervalSince1970: TimeInterval(epoch))) — \(String(format: "%+.0f", offset)) s vs this Mac", .info)
+            if abs(offset) > Self.clockTolerance, wasRead {
+                syncClock()
+            }
         case HueUUID.capabilities:
             log("capabilities (0001): \(data.hexString)", .info)
         case HueUUID.powerOnDefault:
@@ -1112,6 +1173,10 @@ extension HueLight: @preconcurrency CBPeripheralDelegate {
         let wasRead = consumeOutstandingRead(uuid)
 
         if let error {
+            if probeReads.contains(uuid) {
+                log("probe read \(HueUUID.label(uuid)) failed: \(describe(error))", .info)
+                return
+            }
             lastError = error.localizedDescription
             if isEncryptionError(error) {
                 log("read \(HueUUID.label(uuid)) refused — link not encrypted: \(describe(error))", .info)

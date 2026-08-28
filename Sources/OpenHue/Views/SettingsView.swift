@@ -102,6 +102,10 @@ private struct ScheduleSettingsTab: View {
                 SettingToggle("Keep this Mac awake while OpenHue is running",
                               caption: "Prevents idle sleep so morning schedules can fire. Battery impact on laptops.",
                               isOn: settingBinding(model, \.keepMacAwakeWhileRunning))
+                SettingToggle("Keep this Mac awake while a timer counts down",
+                              caption: "Released the moment the lights switch off.",
+                              isOn: settingBinding(model, \.keepMacAwakeForSleepTimers))
+                FadeOutPicker(label: "Timer fade-out")
             }
             Section {
                 Stepper(value: settingBinding(model, \.missedGraceOnMinutes), in: 0...180, step: 5) {
@@ -119,7 +123,7 @@ private struct ScheduleSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 380)
+        .frame(height: 530)
     }
 }
 

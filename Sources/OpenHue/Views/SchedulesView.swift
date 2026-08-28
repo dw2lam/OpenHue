@@ -16,29 +16,47 @@ struct SchedulesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HueInfoCallout("Schedules run on this Mac — it must be awake, OpenHue running, and the bulbs in range.") {
+            HueInfoCallout("Mac schedules run here (Mac awake, OpenHue open, bulbs in range). Bulb schedules live in the bulb and fire on their own.") {
                 SettingsLink { Text("Settings…") }
                     .controlSize(.small)
             }
             .padding([.horizontal, .top], 16)
             .padding(.bottom, 8)
 
-            if model.schedules.isEmpty {
+            if model.schedules.isEmpty && model.lights.isEmpty {
                 EmptyStateView("No Schedules", systemImage: "clock",
                                description: "Add a wake-up fade, a bedtime fade-out, or a simple on/off timer.") {
                     Button("Add Schedule") { editor = EditorRequest(schedule: nil) }
                 }
             } else {
                 List {
-                    ForEach(model.schedules) { schedule in
-                        Row(
-                            schedule: schedule,
-                            scheduler: model.scheduler,
-                            onEdit: { editor = EditorRequest(schedule: schedule) },
-                            onRunNow: { model.runNow(schedule) },
-                            onDuplicate: { duplicate(schedule) },
-                            onDelete: { pendingDelete = schedule }
-                        )
+                    Section {
+                        if model.schedules.isEmpty {
+                            HStack {
+                                Label("No Mac schedules yet.", systemImage: "clock")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Add Schedule") { editor = EditorRequest(schedule: nil) }
+                                    .controlSize(.small)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        ForEach(model.schedules) { schedule in
+                            Row(
+                                schedule: schedule,
+                                scheduler: model.scheduler,
+                                onEdit: { editor = EditorRequest(schedule: schedule) },
+                                onRunNow: { model.runNow(schedule) },
+                                onDuplicate: { duplicate(schedule) },
+                                onDelete: { pendingDelete = schedule }
+                            )
+                        }
+                    } header: {
+                        Text("On this Mac")
+                    }
+                    ForEach(model.lights) { light in
+                        OnBulbAlarmsSection(light: light)
                     }
                 }
             }

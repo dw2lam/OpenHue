@@ -14,6 +14,7 @@ final class Store {
         case scenes = "scenes.json"
         case schedules = "schedules.json"
         case settings = "settings.json"
+        case sleepTimers = "sleep-timers.json"
     }
 
     private struct Envelope<T: Codable>: Codable {

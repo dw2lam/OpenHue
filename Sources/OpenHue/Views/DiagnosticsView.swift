@@ -111,6 +111,7 @@ private struct LightDiagnosticsCard: View {
                 Divider()
 
                 rawCallouts
+                bulbStorageRow
 
                 DisclosureGroup("Characteristics", isExpanded: $showCharacteristics) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -221,6 +222,44 @@ private struct LightDiagnosticsCard: View {
             rawRow("Capabilities (0001)", HueUUID.capabilities)
             rawRow("Combined state (0007)", HueUUID.combined)
             rawRow("Power-on default (1005)", HueUUID.powerOnDefault)
+            GridRow {
+                Text("Clock (1001)").foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    if let offset = light.clockOffset {
+                        Text(String(format: "%+.0f s vs this Mac", offset))
+                            .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(abs(offset) > HueLight.clockTolerance ? Color.orange : Color.primary)
+                    } else {
+                        Text("not read yet").foregroundStyle(.tertiary)
+                    }
+                    Button("Sync") { light.syncClock() }
+                        .controlSize(.mini)
+                        .disabled(!light.connection.isReady)
+                        .help("Write this Mac's time into the bulb's clock (bulb schedules fire against it)")
+                }
+            }
+        }
+        .font(.callout)
+    }
+
+    /// Stores a disarmed test schedule on the bulb, reads it back, deletes it.
+    private var bulbStorageRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text("Bulb schedules").foregroundStyle(.secondary)
+                Text(light.alarms.status == .unsupported ? "not supported" : "\(light.alarms.alarms.count) stored")
+                    .font(.system(.callout, design: .monospaced))
+                Button("Test storage") { model.testOnBulbStorage(light: light, fireIn: nil) }
+                    .controlSize(.mini)
+                    .disabled(!light.connection.isReady || light.alarms.status == .unsupported || light.alarms.isBusy)
+                    .help("Writes a disarmed test schedule into the bulb, reads it back and deletes it")
+            }
+            if let report = model.onBulbTestReport[light.id] {
+                Text(report)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .font(.callout)
     }

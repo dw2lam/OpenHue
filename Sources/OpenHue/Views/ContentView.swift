@@ -3,6 +3,7 @@ import CoreBluetooth
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         NavigationSplitView {
@@ -18,6 +19,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 820, minHeight: 520)
+        .onAppear { AppDelegate.openMainWindow = { openWindow(id: "main") } }
         .sheet(isPresented: $model.isDiscoveryPresented) {
             DiscoveryView()
                 .environmentObject(model)
@@ -39,6 +41,8 @@ struct ContentView: View {
             Section("Library") {
                 Label("Scenes", systemImage: "theatermasks")
                     .tag(AppModel.SidebarItem.scenes)
+                Label("Timer", systemImage: "timer")
+                    .tag(AppModel.SidebarItem.sleepTimer)
                 Label("Schedules", systemImage: "clock")
                     .tag(AppModel.SidebarItem.schedules)
             }
@@ -84,6 +88,8 @@ struct ContentView: View {
             }
         case .scenes:
             ScenesView()
+        case .sleepTimer:
+            SleepTimerView()
         case .schedules:
             SchedulesView()
         case .diagnostics:
