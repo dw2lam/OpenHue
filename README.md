@@ -21,7 +21,26 @@ Hue bulbs sold in the last few years contain a Bluetooth radio that Signify uses
 - Schedules: weekly or one-off, turn on/off, **wake-up fade-in** and **go-to-sleep fade-out**, targeting all lights or a subset.
 - **Schedules stored on the bulb**: OpenHue writes wake-up / turn-off schedules into the bulb's own memory, where they fire on the bulb's clock with no Mac and no phone around — and it shows, arms, disarms and deletes the routines the Hue app created. First third-party client to do this (the "MAC-protected" create packet turned out to carry a plain UUID v4).
 - Launch at login, keep-the-Mac-awake assertion, and an optional `pmset` scheduled wake so a laptop can run a morning schedule.
-- Diagnostics view: raw characteristic dump, raw read/write, power-on default, live log.
+- Diagnostics view: raw characteristic dump, raw read/write, power-on default, bulb clock, live log.
+
+<table>
+  <tr>
+    <td align="center"><b>Timer</b> — dial, Timer / Sleep modes, one countdown per bulb</td>
+    <td align="center"><b>Schedules</b> — stored on the bulb, fired by its own clock</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshot-timer.png" alt="Timer tab: the All Lights dial counting down in Sleep mode, 20-minute presets on Right and Left"></td>
+    <td><img src="docs/screenshot-schedules.png" alt="Schedules tab: on-the-bulb wake-up schedules for Right and Left"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Effects</b> — the bulb's own plus Police from this Mac</td>
+    <td align="center"><b>Scenes</b> — Hue's stock scenes and your own snapshots</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshot-effects.webp" alt="All Lights on the Effects tab: Candle, Fireplace, Prism … and Police"></td>
+    <td><img src="docs/screenshot-scenes.webp" alt="Scenes view: eleven Hue scene cards plus My scenes"></td>
+  </tr>
+</table>
 
 ## Limits
 
@@ -77,7 +96,7 @@ The same steps are shown inside the app (Add Light → Pairing help, and in a li
 
 ## Timer
 
-![Timer tab — rotary dial, Timer/Sleep modes, one countdown per bulb](docs/screenshot-timer.png)
+<p align="center"><img src="docs/screenshot-timer.png" width="720" alt="Timer tab — the All Lights dial counting down in Sleep mode"></p>
 
 Going to bed? Open **Timer**, turn the dial (or tap **20m**, **1h**, **Custom…**), pick a mode and press **Start**. All Lights has its own timer and so does each bulb, so you can give the bedside lamp 20 minutes and leave the rest alone. While a timer runs the dial drains like a clock face and shows the exact switch-off time; **+5 min** pushes it out, **Cancel** stops it.
 
@@ -85,13 +104,17 @@ Going to bed? Open **Timer**, turn the dial (or tap **20m**, **1h**, **Custom…
 - **Sleep** starts dimming right away and takes the whole countdown to reach the minimum, then switches off — a real sleep timer for drifting off. Touching a light's controls during a fade stops the fade, not the timer.
 - The timer runs on this Mac like schedules do, but it also holds a *keep-awake* assertion until it fires (Settings → Schedules to turn that off), so an idle Mac won't doze off before the lights do.
 - Timers are saved to disk: quit and relaunch, and the countdown carries on. A deadline that passed while OpenHue wasn't running still switches the lights off if it is less than 30 minutes old; older ones are dropped so a stale bedtime timer can't kill the lights the next morning.
-- The menu bar extra has an **Off in…** shortcut for All Lights and shows the live countdown.
+- The menu bar extra has **Off in…** / **Sleep in…** shortcuts for All Lights and shows the live countdown.
+
+<p align="center"><img src="docs/screenshot-menubar.webp" width="386" alt="Menu bar popover with a running timer, per-bulb toggles and scene chips"></p>
 
 ## Schedules
 
 There are two kinds, side by side in the Schedules view.
 
 ### On the bulb
+
+<p align="center"><img src="docs/screenshot-schedules.png" width="720" alt="Schedules view — On the bulb sections for Right and Left listing the routines stored in each bulb"></p>
 
 **Schedules → On the bulb → Add to Bulb** stores a schedule *inside the bulb*: a name, a time, and either *turn on* (brightness, warmth, optional fade-in up to 60 min) or *turn off*. The bulb keeps its own clock — OpenHue reads it on every connect and re-syncs it if it drifts by more than 20 s — and fires the schedule by itself, with the Mac asleep and the phone away. Routines created in the Hue phone app show up in the same list and can be armed, disarmed and deleted from here.
 
@@ -124,6 +147,8 @@ The plan is to make these Bluetooth-only bulbs first-class devices on a home ser
 Everything lives in `~/Library/Application Support/OpenHue/` as plain JSON (`lights.json`, `scenes.json`, `schedules.json`, `sleep-timers.json`, `settings.json`), written atomically. Settings → Data → **Open folder** reveals it. Deleting the folder resets the app; the Bluetooth bonds themselves live in macOS (System Settings → Bluetooth).
 
 ## Troubleshooting
+
+<p align="center"><img src="docs/screenshot-diagnostics.webp" width="720" alt="Diagnostics view with RSSI, firmware, decoded state and raw characteristic dumps"></p>
 
 - **Diagnostics view** (sidebar) shows the Bluetooth state, each bulb's connection state, RSSI, firmware, decoded state, every characteristic with its last raw value, and a raw read/write box. The log panel at the bottom mirrors the app's unified log; **Copy** puts it on the clipboard.
 - Same log from Terminal:
