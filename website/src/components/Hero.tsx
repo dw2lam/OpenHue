@@ -108,7 +108,7 @@ export default function Hero() {
 
       <header className="hero__nav">
         <a className="hero__logo" href="#top" aria-label="OpenHue — top of page">
-          OPENHUE
+          <img src="/icon.png" width="30" height="30" alt="" decoding="async" />
         </a>
         <div className="hero__cluster">
           <nav className="hero__links" aria-label="Primary">
@@ -139,7 +139,10 @@ export default function Hero() {
 
       <div className="hero__body">
         <div className="hero__panel">
-          <span className="hero__chip">[ Swift · Native · Open source ]</span>
+          <p className="hero__meet">
+            <span className="hero__meet-k">Meet</span>
+            <span className="hero__meet-mark">OPENHUE</span>
+          </p>
           <h1 className="hero__title">Control the bulbs you&nbsp;own.</h1>
           <p className="hero__lede">
             A native Swift app for Philips Hue Bluetooth bulbs that does everything the Hue app does — and more.

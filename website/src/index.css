@@ -15,8 +15,8 @@
   --gutter: clamp(20px, 5vw, 100px);
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --font-display: "Sora", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-display: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
   /* Section rhythm (used outside the hero) */
   --section-pad: clamp(96px, 12vw, 200px);
@@ -83,14 +83,14 @@ h1, h2, h3, p { margin: 0; }
   font-family: var(--font-display);
   font-weight: 200;
   font-size: var(--fs-display);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
   line-height: 1.0;
 }
 .h2 {
   font-family: var(--font-display);
   font-weight: 200;
   font-size: var(--fs-h2);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.015em;
   line-height: 1.05;
 }
 .h3 { font-family: var(--font-display); font-weight: 300; font-size: var(--fs-h3); line-height: 1.2; }
