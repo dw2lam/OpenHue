@@ -1,0 +1,71 @@
+/* ─────────────────────────────────────────────────────────────
+   Download — Sora 200 statement, release buttons, three cards
+   on hairlines (requirements, Gatekeeper, build from source).
+   ───────────────────────────────────────────────────────────── */
+.dl { border-top: 1px solid var(--line); }
+.dl__hero { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dl__display { margin-top: clamp(20px, 2.4vw, 36px); max-width: 16ch; }
+.dl__readout {
+  margin-top: clamp(24px, 2.6vw, 40px);
+  font-family: var(--font-mono); font-weight: 400;
+  font-size: clamp(11px, 0.78vw, 14px); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--text-dim); line-height: 1;
+  padding: 14px 20px; border: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.dl__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: clamp(22px, 2.4vw, 36px); width: 100%; max-width: 760px; }
+.dl__actions .btn { flex: 1 1 200px; }
+.dl__hint { margin-top: clamp(18px, 2vw, 28px); font-family: var(--font-display); font-weight: 300; font-size: var(--fs-small); color: var(--text-dimmer); line-height: 1.6; }
+.dl__hint strong { font-weight: 400; color: var(--text-dim); }
+.dl__hint a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.dl__hint a:hover { color: var(--text); }
+
+.dl__grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: clamp(64px, 7vw, 120px);
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.dl-card { padding: clamp(26px, 2.8vw, 44px) clamp(20px, 2.2vw, 36px); border-left: 1px solid var(--line); min-width: 0; }
+.dl-card:first-child { border-left: 0; padding-left: 0; }
+.dl-card:last-child { padding-right: 0; }
+.dl-card__k { font-family: var(--font-mono); font-weight: 400; font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text); }
+.dl-card__text { margin-top: 18px; font-family: var(--font-display); font-weight: 300; font-size: var(--fs-small); line-height: 1.65; color: var(--text-dim); }
+.dl-card__text strong, .dl-card__note strong { font-weight: 400; color: var(--text); }
+.dl-card__text em, .dl-card__note em { font-style: italic; }
+.dl-card__note { margin-top: 16px; font-family: var(--font-display); font-weight: 300; font-size: clamp(12px, 0.8vw, 14px); line-height: 1.6; color: var(--text-dimmer); }
+.dl-card__note code { font-family: var(--font-mono); font-size: 0.9em; color: var(--text-dim); background: rgba(255, 255, 255, 0.06); padding: 1px 5px; letter-spacing: 0.02em; }
+
+.dl-list { list-style: none; margin: 18px 0 0; padding: 0; }
+.dl-list li {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 13px 0; border-top: 1px solid var(--line);
+}
+.dl-list li:first-child { border-top: 0; padding-top: 0; }
+.dl-list span { font-family: var(--font-display); font-weight: 300; font-size: var(--fs-small); color: var(--text); line-height: 1.4; }
+.dl-list em { font-style: normal; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dimmer); }
+
+/* Copyable mono block */
+.dl-code {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-top: 18px; padding: 12px 12px 12px 14px;
+  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03);
+}
+.dl-code__text {
+  flex: 1; min-width: 0; font-family: var(--font-mono); font-weight: 400;
+  font-size: 12.5px; letter-spacing: 0.02em; color: var(--text);
+  white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6;
+}
+.dl-code__copy {
+  flex: none; font-family: var(--font-mono); font-weight: 400;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; line-height: 1;
+  color: var(--text-dim); border: 1px solid var(--line-strong); padding: 8px 10px; min-width: 66px;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.dl-code__copy:hover { background: var(--fill-ghost); color: var(--text); border-color: rgba(255, 255, 255, 0.55); }
+
+@media (max-width: 900px) {
+  .dl__grid { grid-template-columns: 1fr; }
+  .dl-card { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; padding-right: 0; }
+  .dl-card:first-child { border-top: 0; }
+  .dl__actions .btn { flex-basis: 100%; }
+}

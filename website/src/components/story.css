@@ -1,0 +1,123 @@
+/* ── Story — "what it is" (scoped .story-) ───────────────────── */
+.story { background: var(--bg); }
+
+.story-head {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--gutter);
+  align-items: end;
+}
+.story-head .eyebrow { grid-column: 1 / -1; margin-bottom: clamp(28px, 3.2vw, 56px); }
+.story-title { grid-column: 1 / 8; }
+.story-lede { grid-column: 8 / 13; max-width: 44ch; padding-bottom: 0.35em; }
+
+/* ── Perspective scene ───────────────────────────────────────── */
+.story-scene {
+  position: relative;
+  margin-top: clamp(64px, 8vw, 140px);
+  aspect-ratio: 16 / 9;
+  perspective: 1500px;
+  perspective-origin: 50% 42%;
+}
+.story-glow {
+  position: absolute;
+  inset: -8% -4%;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 44% at 54% 46%, rgba(255, 128, 64, 0.2), transparent 72%),
+    radial-gradient(26% 36% at 32% 62%, rgba(72, 112, 255, 0.11), transparent 72%),
+    radial-gradient(22% 30% at 78% 72%, rgba(255, 64, 140, 0.07), transparent 72%);
+  filter: blur(28px);
+}
+.story-stack,
+.story-tilt {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.story-layer {
+  position: absolute;
+  margin: 0;
+  outline: 1px solid var(--line);
+  box-shadow: var(--shadow-deep);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.story-layer img { width: 100%; height: auto; }
+.story-layer--ct   { left: 2%;  top: 3%;  width: 40%; }
+.story-layer--win  { left: 18%; top: 9%;  width: 64%; }
+.story-layer--menu { left: 71%; top: 50%; width: 22%; }
+.story-layer--dial { left: 10%; top: 56%; width: 15%; }
+
+.story-cap {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 14px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: clamp(10px, 0.7vw, 12px);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dimmer);
+}
+.story-cap--right { left: auto; right: 0; }
+.story-layer--win .story-cap { display: none; }
+
+/* ── Three facts ─────────────────────────────────────────────── */
+.story-facts {
+  list-style: none;
+  margin: clamp(72px, 9vw, 160px) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 56px);
+}
+.story-fact { border-top: 1px solid var(--line); padding-top: clamp(18px, 1.6vw, 26px); }
+.story-fact__k { display: flex; align-items: baseline; gap: 14px; color: var(--text); }
+.story-fact__n {
+  font-family: var(--font-mono);
+  font-weight: 300;
+  font-size: clamp(11px, 0.78vw, 14px);
+  letter-spacing: 0.18em;
+  color: var(--text-dimmer);
+}
+.story-fact__v {
+  margin-top: clamp(14px, 1.2vw, 20px);
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: clamp(14px, 0.95vw, 17px);
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 38ch;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .story-title { grid-column: 1 / 9; }
+  .story-lede { grid-column: 1 / 10; margin-top: clamp(24px, 3vw, 40px); }
+}
+@media (max-width: 720px) {
+  .story-title, .story-lede { grid-column: 1 / -1; }
+  .story-lede { margin-top: 24px; max-width: none; }
+  .story-scene { aspect-ratio: 4 / 4.4; perspective: 1100px; margin-top: 56px; }
+  .story-glow { filter: blur(20px); }
+  .story-layer--ct   { left: 0;   top: 0;   width: 68%; }
+  .story-layer--win  { left: 4%;  top: 10%; width: 92%; }
+  .story-layer--menu { left: 58%; top: 60%; width: 40%; }
+  .story-layer--dial { left: 4%;  top: 62%; width: 30%; }
+  .story-cap { display: none; }
+  .story-facts { grid-template-columns: 1fr; gap: 28px; margin-top: 72px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-layer { will-change: auto; }
+  .story-layer--ct   { transform: translateZ(-180px); }
+  .story-layer--menu { transform: translateZ(170px); }
+  .story-layer--dial { transform: translateZ(250px); }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 720px) {
+  .story-layer--ct   { transform: translateZ(-90px); }
+  .story-layer--menu { transform: translateZ(85px); }
+  .story-layer--dial { transform: translateZ(125px); }
+}
