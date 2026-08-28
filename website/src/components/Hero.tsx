@@ -181,9 +181,8 @@ export default function Hero() {
             ))}
           </nav>
           <a className="hero__gh" href={REPO_URL} target="_blank" rel="noopener" aria-label="OpenHue on GitHub (opens in a new tab)">
-            <GitHubMark />
             <span>GitHub</span>
-            <i aria-hidden="true">↗</i>
+            <GitHubMark />
           </a>
           <button
             ref={toggleRef}
@@ -277,9 +276,8 @@ export default function Hero() {
               onClick={closeMenu}
               {...externalProps(link)}
             >
-              {link.external && <GitHubMark size={18} />}
               {link.label}
-              {link.external && <i aria-hidden="true">↗</i>}
+              {link.external && <GitHubMark size={18} />}
             </a>
           ))}
           <a
