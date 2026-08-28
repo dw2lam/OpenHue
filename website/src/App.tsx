@@ -1,5 +1,6 @@
 import Hero from './components/Hero';
 import Story from './components/Story';
+import MacDemo from './components/MacDemo';
 import Showcase from './components/Showcase';
 import Playground from './components/Playground';
 import Pairing from './components/Pairing';
@@ -12,6 +13,7 @@ export default function App() {
       <Hero />
       <main>
         <Story />
+        <MacDemo />
         <Showcase />
         <Playground />
         <Pairing />

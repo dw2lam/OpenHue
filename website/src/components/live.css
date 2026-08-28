@@ -1,0 +1,113 @@
+/* ── Live overlays on top of captures (scoped .lv-) ───────────────
+   A .lv-frame is an image box (container-query root); every .lv child is positioned in % of
+   that box and sized in cqw, so replicas scale with the capture at any width. Replica colours
+   are sampled from the captures (card #262829, window #1d1f21, popover #0f0f0f). */
+.lv-frame { position: relative; margin: 0; container-type: inline-size; }
+.lv-frame > img { width: 100%; height: auto; display: block; }
+
+.lv {
+  position: absolute;
+  pointer-events: none;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Text replicas (a patch of the surface colour + live text) */
+.lv-text { display: flex; align-items: center; }
+
+/* Timer dial (SVG replica of the app's dial) */
+.lv-dial svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.lv-dial__arc { transition: stroke-dashoffset 0.9s linear; }
+.lv-dial__last.is-tick { animation: lv-tick 0.36s ease-out; }
+@keyframes lv-tick {
+  0% { filter: blur(3px); opacity: 0.35; }
+  100% { filter: blur(0); opacity: 1; }
+}
+
+/* Colour-temperature slider */
+.lv-track { background: #262829; }
+.lv-track__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 12.12%;
+  bottom: 12.12%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f0933d 0%, #f2a459 10%, #f3b375 20%, #f5c08f 30%, #f6cca3 40%, #f8d6b6 50%, #fadfc5 60%, #fae7d5 70%, #fdefe2 80%, #fef5ee 90%, #fffdf9 100%);
+}
+.lv-thumb,
+.lv-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border-style: solid;
+  border-color: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Bulb dots (sidebar / rows / popover) */
+.lv-dot { border-radius: 50%; }
+.lv-dot--pa { animation: lv-dot-a 2.4s ease-in-out infinite; }
+.lv-dot--pb { animation: lv-dot-b 2.4s ease-in-out infinite; }
+.lv-dot--pulse { animation: lv-pulse 2.2s ease-in-out infinite; }
+/* Colour holds, then swaps over ~0.2 s — never a purple in-between */
+@keyframes lv-dot-a { 0%, 42% { background: var(--hue-red); } 50%, 92% { background: var(--hue-police-blue); } 100% { background: var(--hue-red); } }
+@keyframes lv-dot-b { 0%, 42% { background: var(--hue-police-blue); } 50%, 92% { background: var(--hue-red); } 100% { background: var(--hue-police-blue); } }
+@keyframes lv-pulse { 50% { opacity: 0.45; transform: scale(0.82); } }
+
+/* macOS switch replica */
+.lv-toggle { border-radius: 999px; background: #323436; transition: background 0.35s ease; }
+.lv-toggle.is-on { background: #397cf6; }
+.lv-toggle__knob {
+  position: absolute;
+  border-radius: 50%;
+  background: #dedede;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: transform 0.45s var(--ease-premium), background 0.35s ease;
+}
+.lv-toggle.is-on .lv-toggle__knob { transform: translateX(var(--travel)); background: #e1ebfe; }
+
+/* Selection highlight (scene cards, chips) */
+.lv-hl {
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.07);
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+.lv-hl.is-on { opacity: 1; }
+
+/* Police tile: red ↔ blue, 2.4 s per cycle (0.4 Hz — soft, far below any flash threshold) */
+.lv-police { overflow: hidden; }
+.lv-police > span { position: absolute; inset: 0; border-radius: inherit; border-style: solid; border-width: inherit; }
+.lv-police > span:nth-child(1) { border-color: rgba(255, 82, 82, 0.95); background: rgba(255, 43, 43, 0.22); animation: lv-pa 2.4s ease-in-out infinite; }
+.lv-police > span:nth-child(2) { border-color: rgba(84, 124, 255, 0.95); background: rgba(43, 92, 255, 0.26); animation: lv-pb 2.4s ease-in-out infinite; }
+@keyframes lv-pa { 0%, 42% { opacity: 1; } 50%, 92% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes lv-pb { 0%, 42% { opacity: 0; } 50%, 92% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Fade progress bar */
+.lv-bar { border-radius: 999px; background: #313946; overflow: hidden; }
+.lv-bar > span { position: absolute; inset: 0 auto 0 0; width: 15.6%; border-radius: inherit; background: #3478f6; }
+
+/* Ambient glows driven by the overlays */
+.lv-glow-pair, .lv-police-glow { position: absolute; inset: 0; pointer-events: none; }
+.lv-glow-pair .glow { transition: opacity 1.2s ease; }
+.lv-glow-pair .glow.is-off { opacity: 0; }
+.lv-police-glow .glow:nth-child(1) { --glow: var(--hue-red); animation: lv-pa 2.4s ease-in-out infinite; }
+.lv-police-glow .glow:nth-child(2) { --glow: var(--hue-police-blue); animation: lv-pb 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-dial__arc, .lv-toggle, .lv-toggle__knob, .lv-hl, .lv-glow-pair .glow { transition: none; }
+}

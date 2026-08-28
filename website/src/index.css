@@ -30,6 +30,17 @@
   --fs-body: clamp(15px, 1.05vw, 19px);
   --fs-small: clamp(12px, 0.82vw, 15px);
 
+  /* Hue palette — the only colour on the page is light. Use for glows/ambient tints, never for chrome. */
+  --hue-warm: #f2a65a;      /* 2700 K */
+  --hue-candle: #ff9a3c;
+  --hue-sunset: #ff5e62;
+  --hue-magenta: #d84bff;
+  --hue-blue: #4d7cff;
+  --hue-cyan: #35d0ff;
+  --hue-mint: #58e6b0;
+  --hue-red: #ff2b2b;
+  --hue-police-blue: #2b5cff;
+
   /* One depth shadow for floating UI (screenshots, stacks) */
   --shadow-deep: 0 60px 120px -40px rgba(0, 0, 0, 0.9), 0 20px 40px -20px rgba(0, 0, 0, 0.7);
 }
@@ -115,6 +126,10 @@ h1, h2, h3, p { margin: 0; }
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   backdrop-filter: blur(20px) saturate(140%);
 }
+
+/* Ambient light — a soft coloured glow behind floating UI (use sparingly, one per composition) */
+.glow { position: absolute; inset: -10%; pointer-events: none; z-index: 0; filter: blur(60px); opacity: 0.55;
+  background: radial-gradient(closest-side at 50% 55%, var(--glow, var(--hue-warm)) 0%, transparent 70%); }
 
 /* Hairline rules */
 .rule { height: 1px; background: var(--line); border: 0; margin: 0; }

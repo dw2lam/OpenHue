@@ -194,7 +194,8 @@ const POLICE_BLUE = rgbFromXY(clampToGamutC(xyFromRGB({ r: 0, g: 0, b: 1 })));
 function displayRGB(c: ColorMode): RGB {
   return c.kind === 'ct' ? rgbFromKelvin(kelvinFromMireds(c.mireds)) : rgbFromXY({ x: c.x, y: c.y });
 }
-const css = (c: RGB) => `rgb(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)})`;
+const rgbList = (c: RGB) => `${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)}`;
+const css = (c: RGB) => `rgb(${rgbList(c)})`;
 
 /* ────────────────────────────────────────────────────────────────
    Playground state
@@ -217,14 +218,15 @@ interface PgState {
   timerMode: TimerMode;
 }
 
+/** Arrival state: warm white on the left, a Candle already flickering on the right — alive before any click. */
 const INITIAL: PgState = {
   lights: [
     { on: true, bri: 254, color: { kind: 'ct', mireds: 367 }, effect: 'none' },
-    { on: true, bri: 254, color: { kind: 'ct', mireds: 367 }, effect: 'none' },
+    { on: true, bri: 230, color: { kind: 'ct', mireds: 400 }, effect: 'candle' },
   ],
   target: 'all',
   tab: 'white',
-  scene: 'Bright',
+  scene: null,
   police: null,
   policeInterval: 0.35,
   timer: null,
@@ -326,7 +328,7 @@ const hex = (n: number) => n.toString(16).padStart(2, '0').toUpperCase();
 const u16le = (n: number) => `${hex(n & 0xff)} ${hex((n >> 8) & 0xff)}`;
 /** The bytes OpenHue would write for the current control — see the protocol table below. */
 function packetFor(tab: Tab, L: Light, police: Police | null): { char: string; bytes: string; note: string } {
-  if (police) return { char: '0005', bytes: `${u16le(Math.round(GAMUT_C.r.x * 65535))} ${u16le(Math.round(GAMUT_C.r.y * 65535))}`, note: `xy red / blue, written by the Mac every ${police.interval.toFixed(2)} s` };
+  if (police) return { char: '0005', bytes: `${u16le(Math.round(GAMUT_C.r.x * 65535))} ${u16le(Math.round(GAMUT_C.r.y * 65535))}`, note: `xy red/blue · Mac · every ${police.interval.toFixed(2)} s` };
   if (tab === 'white') {
     const m = L.color.kind === 'ct' ? L.color.mireds : approxMireds(L.color);
     return { char: '0004', bytes: u16le(m), note: `uint16 LE · ${m} mireds` };
@@ -344,13 +346,22 @@ const fmtClock = (secs: number) => {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 };
 
+/** Quick CT stops — same values the app's slider snaps to comfortably. */
+const CT_PRESETS: [number, string][] = [[2000, 'Ember'], [2700, 'Warm'], [4000, 'Neutral'], [6500, 'Daylight']];
 const CT_TRACK = `linear-gradient(90deg, ${[2000, 2400, 2700, 3200, 4000, 5000, 6500].map((k) => css(rgbFromKelvin(k))).join(', ')})`;
 const BRI_TRACK = 'linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.92))';
 const LAMP_POS = [{ x: 30, y: 40 }, { x: 70, y: 40 }];
 const RING_R = 22;
 const RING_C = 2 * Math.PI * RING_R;
 
+
 interface LampEls { root: HTMLDivElement; lastC: string; lastK: number }
+
+/** Copy budget: mono tags, not sentences. */
+const HEAD_TAGS = ['2 virtual bulbs', 'White · Color · Effects', '11 Hue scenes', 'Police from the Mac', 'Timer'];
+const footTags = (interval: number) => [
+  '254 brightness steps', '153–500 mireds', 'xy · gamut C', 'Effects run on the bulb', `Police · Mac · every ${interval.toFixed(2)} s`,
+];
 
 /* ────────────────────────────────────────────────────────────────
    Component
@@ -358,6 +369,7 @@ interface LampEls { root: HTMLDivElement; lastC: string; lastK: number }
 export default function Playground() {
   const root = useReveal<HTMLElement>();
   const frameRef = useRef<HTMLDivElement>(null);
+  const ambientRef = useRef<HTMLDivElement>(null);
   const [st, setSt] = useState<PgState>(INITIAL);
   const stRef = useRef(st);
   stRef.current = st;
@@ -373,6 +385,7 @@ export default function Playground() {
   const sim = useRef({
     cur: [{ r: 1, g: 0.65, b: 0.34, k: 0 }, { r: 1, g: 0.65, b: 0.34, k: 0 }] as Frame[],
     last: 0, raf: 0, active: false, visible: true, rm: false,
+    ambAt: 0, ambC: '', ambK: -1,
   });
 
   const tick = useRef((now: number) => {
@@ -414,6 +427,22 @@ export default function Playground() {
         if (cs !== el.lastC) { el.root.style.setProperty('--c', cs); el.lastC = cs; }
         if (Math.abs(c.k - el.lastK) > 0.0025) { el.root.style.setProperty('--k', c.k.toFixed(3)); el.lastK = c.k; }
       }
+    }
+
+    /* Ambient glow behind the frame follows the light — at most ~8 writes/s (a blurred layer repaints on
+       every colour change); the registered --pg-glow transition smooths between writes. Police strobes. */
+    const amb = ambientRef.current;
+    if (amb && (s.police || now - S.ambAt > 120)) {
+      const a = S.cur[0], b = S.cur[1];
+      let cs = S.ambC;
+      if (s.police) cs = `${Math.round(a.r * 255)},${Math.round(a.g * 255)},${Math.round(a.b * 255)}`;
+      else if (a.k + b.k > 0.01) {
+        const w = a.k + b.k;
+        cs = `${Math.round(((a.r * a.k + b.r * b.k) / w) * 255)},${Math.round(((a.g * a.k + b.g * b.k) / w) * 255)},${Math.round(((a.b * a.k + b.b * b.k) / w) * 255)}`;
+      }
+      const k = Math.max(a.k, b.k);
+      if (cs !== S.ambC) { amb.style.setProperty('--pg-glow', `rgb(${cs})`); S.ambC = cs; S.ambAt = now; }
+      if (Math.abs(k - S.ambK) > 0.02) { amb.style.setProperty('--pg-k', k.toFixed(2)); S.ambK = k; S.ambAt = now; }
     }
 
     if (busy && S.visible) S.raf = requestAnimationFrame(tick.current);
@@ -530,204 +559,216 @@ export default function Playground() {
   const thumbTop = `${50 + Math.sin(hs.h * 2 * Math.PI) * hs.s * 50}%`;
   const anyOn = st.lights.some((l) => l.on);
   const pkt = packetFor(st.tab, lead, st.police);
-  const offAt = st.timer ? new Date(st.timer.endsAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+  const offAt = st.timer ? new Date(st.timer.endsAt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '';
+  const modeName = st.police ? 'Police' : lead.effect !== 'none' ? effectName(lead.effect) : lead.color.kind === 'ct' ? 'White' : 'Color';
 
   return (
     <section id="playground" className="section pg" ref={root}>
       <div className="section__inner">
         <header className="pg__head">
           <div>
-            <p className="eyebrow reveal">[ 03 — Try it ]</p>
+            <p className="eyebrow reveal">[ 04 — Try it ]</p>
             <h2 className="h2 pg__title reveal" data-delay="1">Same controls.<br />No bulbs required.</h2>
           </div>
-          <p className="body pg__lede reveal" data-delay="2">
-            Two virtual bulbs, the app's White / Color / Effects controls, Hue's eleven stock scenes and the
-            Mac-driven Police strobe — the real colour math from OpenHue, simulated in your browser.
-          </p>
+          <ul className="pg-tags reveal" data-delay="2" aria-label="What is simulated">
+            {HEAD_TAGS.map((t) => <li key={t}>{t}</li>)}
+          </ul>
         </header>
 
-        <div className="pg-frame" ref={frameRef}>
-          {/* ── The room ─────────────────────────────────────────── */}
-          <div className="pg-room" aria-hidden="true">
-            <div className="pg-room__floor" />
-            <div className="pg-room__horizon" />
-            {LAMP_POS.map((p, i) => (
-              <div
-                key={i}
-                className="pg-lamp"
-                style={{ ['--x' as string]: `${p.x}%`, ['--y' as string]: `${p.y}%` }}
-                ref={(el) => { lampEls.current[i] = el ? { root: el, lastC: '', lastK: -1 } : null; }}
-              >
-                <div className="pg-pool" />
-                <div className="pg-glow pg-glow--far" />
-                <div className="pg-glow pg-glow--near" />
-                <div className="pg-cord" />
-                <div className="pg-socket" />
-                <div className="pg-bulb">
-                  <div className="pg-bulb__glass" />
-                  <div className="pg-bulb__lit" />
-                </div>
-              </div>
-            ))}
-            <div className="pg-room__tags">
-              <span className="pg-tag"><i className={`pg-tag__dot${anyOn ? ' is-on' : ''}`} />Simulated room</span>
-              <span className="pg-tag">2 of 2 connected</span>
-            </div>
-            <div className="pg-room__readouts">
-              <span className="pg-ro"><b>Left</b><span>{describe(st, 0)}</span></span>
-              <span className="pg-ro pg-ro--r"><b>Right</b><span>{describe(st, 1)}</span></span>
-            </div>
+        <div className="pg-stage">
+          {/* Ambient light behind the frame — colour follows the bulbs, breathes slowly */}
+          <div className="pg-ambient-wrap" aria-hidden="true">
+            <div ref={ambientRef} className={`glow pg-ambient${st.police ? ' is-police' : ''}`} />
           </div>
 
-          {/* ── Controls ─────────────────────────────────────────── */}
-          <div className="pg-panel">
-            <div className="pg-block pg-block--top">
-              <div className="pg-row">
-                <div className="pg-seg" role="tablist" aria-label="Target">
-                  {([['all', 'All Lights'], [0, 'Left'], [1, 'Right']] as [Target, string][]).map(([v, label]) => (
-                    <button key={String(v)} type="button" className={`pg-seg__btn${st.target === v ? ' is-on' : ''}`} onClick={() => setSt((p) => ({ ...p, target: v }))}>{label}</button>
+          <div className="pg-frame" ref={frameRef}>
+            {/* ── The room ─────────────────────────────────────────── */}
+            <div className="pg-room" aria-hidden="true">
+              <div className="pg-room__floor" />
+              <div className="pg-room__horizon" />
+              {LAMP_POS.map((p, i) => (
+                <div
+                  key={i}
+                  className="pg-lamp"
+                  style={{ ['--x' as string]: `${p.x}%`, ['--y' as string]: `${p.y}%` }}
+                  ref={(el) => { lampEls.current[i] = el ? { root: el, lastC: '', lastK: -1 } : null; }}
+                >
+                  <div className="pg-pool" />
+                  <div className="pg-glow pg-glow--far" />
+                  <div className="pg-glow pg-glow--near" />
+                  <div className="pg-cord" />
+                  <div className="pg-socket" />
+                  <div className="pg-bulb">
+                    <div className="pg-bulb__glass" />
+                    <div className="pg-bulb__lit" />
+                  </div>
+                </div>
+              ))}
+              <div className="pg-room__tags">
+                <span className="pg-tag"><i className={`pg-tag__dot${anyOn ? ' is-on' : ''}`} />Sim room</span>
+                <span className="pg-tag">2 / 2 connected</span>
+              </div>
+              <div className="pg-room__readouts">
+                <span className="pg-ro"><b>Left</b><span>{describe(st, 0)}</span></span>
+                <span className="pg-ro pg-ro--r"><b>Right</b><span>{describe(st, 1)}</span></span>
+              </div>
+            </div>
+
+            {/* ── Controls ─────────────────────────────────────────── */}
+            <div className="pg-panel">
+              <div className="pg-block pg-block--top">
+                <div className="pg-row">
+                  <div className="pg-seg" role="tablist" aria-label="Target">
+                    {([['all', 'All'], [0, 'Left'], [1, 'Right']] as [Target, string][]).map(([v, label]) => (
+                      <button key={String(v)} type="button" role="tab" aria-selected={st.target === v} className={`pg-seg__btn${st.target === v ? ' is-on' : ''}`} onClick={() => setSt((p) => ({ ...p, target: v }))}>{label}</button>
+                    ))}
+                  </div>
+                  <button type="button" className={`pg-switch${lead.on ? ' is-on' : ''}`} role="switch" aria-checked={lead.on} aria-label="Power" onClick={() => setPower(!lead.on)}>
+                    <span className="pg-switch__knob" />
+                  </button>
+                </div>
+                <div className="pg-row pg-row--status">
+                  <span className="pg-label">{lead.on ? 'On' : 'Off'}<em>{lead.on ? ` · ${modeName}` : ''}</em></span>
+                  <span className="pg-row__end">
+                    {st.police && <button type="button" className="pg-mini pg-mini--live" onClick={stopPolice}>Stop</button>}
+                    <span className="pg-value">{pct}%</span>
+                  </span>
+                </div>
+                <input className="pg-range" type="range" min={1} max={100} value={pct} aria-label="Brightness"
+                  style={{ ['--track' as string]: BRI_TRACK }} onChange={(e) => setBrightness(Number(e.target.value))} />
+              </div>
+
+              <div className="pg-block">
+                <div className="pg-seg pg-seg--tabs" role="tablist" aria-label="Mode">
+                  {([['white', 'White'], ['color', 'Color'], ['effects', 'Effects']] as [Tab, string][]).map(([v, label]) => (
+                    <button key={v} type="button" role="tab" aria-selected={st.tab === v} className={`pg-seg__btn${st.tab === v ? ' is-on' : ''}`} onClick={() => setSt((p) => ({ ...p, tab: v }))}>{label}</button>
                   ))}
                 </div>
-                <button type="button" className={`pg-switch${lead.on ? ' is-on' : ''}`} role="switch" aria-checked={lead.on} aria-label="Power" onClick={() => setPower(!lead.on)}>
-                  <span className="pg-switch__knob" />
-                </button>
-              </div>
-              <div className="pg-row pg-row--status">
-                <span className="pg-label">{lead.on ? 'On' : 'Off'}<em>{lead.on ? ` · ${st.police ? 'Police' : lead.effect !== 'none' ? effectName(lead.effect) : lead.color.kind === 'ct' ? 'White' : 'Color'}` : ''}</em></span>
-                <span className="pg-row__end">
-                  {st.police && <button type="button" className="pg-mini pg-mini--live" onClick={stopPolice}>Stop Police</button>}
-                  <span className="pg-value">{pct}%</span>
-                </span>
-              </div>
-              <input className="pg-range" type="range" min={1} max={100} value={pct} aria-label="Brightness"
-                style={{ ['--track' as string]: BRI_TRACK }} onChange={(e) => setBrightness(Number(e.target.value))} />
-            </div>
 
-            <div className="pg-block">
-              <div className="pg-seg pg-seg--tabs" role="tablist" aria-label="Mode">
-                {([['white', 'White'], ['color', 'Color'], ['effects', 'Effects']] as [Tab, string][]).map(([v, label]) => (
-                  <button key={v} type="button" role="tab" aria-selected={st.tab === v} className={`pg-seg__btn${st.tab === v ? ' is-on' : ''}`} onClick={() => setSt((p) => ({ ...p, tab: v }))}>{label}</button>
-                ))}
-              </div>
-
-              <div className="pg-pane">
-                {st.tab === 'white' && (
-                  <div className="pg-ct">
-                    <div className="pg-row"><span className="pg-label">Colour temperature</span><span className="pg-value">{kelvin} K <em>· {miredsFromKelvin(kelvin)} mireds</em></span></div>
-                    <input className="pg-range" type="range" min={2000} max={6500} step={10} value={kelvin} aria-label="Colour temperature in kelvin"
-                      style={{ ['--track' as string]: CT_TRACK }} onChange={(e) => setKelvin(Number(e.target.value))} />
-                    <div className="pg-scale"><span>2000 K · Warm</span><span className="pg-scale__mid">153–500 mireds</span><span>6500 K · Cool</span></div>
-                  </div>
-                )}
-
-                {st.tab === 'color' && (
-                  <div className="pg-colorpane">
-                    <div
-                      className="pg-wheel"
-                      ref={wheelRef}
-                      role="slider"
-                      aria-label="Colour wheel"
-                      aria-valuetext={`hue ${Math.round(hs.h * 360)}°, saturation ${Math.round(hs.s * 100)}%`}
-                      tabIndex={0}
-                      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); wheelAt(e); }}
-                      onPointerMove={(e) => { if (e.buttons & 1) wheelAt(e); }}
-                      onPointerUp={() => setDrag(null)}
-                      onPointerCancel={() => setDrag(null)}
-                    >
-                      <div className="pg-wheel__thumb" style={{ left: thumbLeft, top: thumbTop, background: css(thumbRGB) }} />
-                    </div>
-                    <div className="pg-row pg-row--xy">
-                      <span className="pg-label">xy</span>
-                      <span className="pg-value">{lead.color.kind === 'xy' ? `${lead.color.x.toFixed(4)}  ${lead.color.y.toFixed(4)}` : '— (CT mode)'}</span>
-                    </div>
-                  </div>
-                )}
-
-                {st.tab === 'effects' && (
-                  <div className="pg-fxpane">
-                    <div className="pg-fx" role="radiogroup" aria-label="Bulb effects">
-                      {EFFECTS.map((e) => {
-                        const on = !st.police && lead.effect === e.id;
-                        return (
-                          <button key={e.id} type="button" role="radio" aria-checked={on} className={`pg-fx__cell${on ? ' is-on' : ''}`} onClick={() => setEffect(e.id)}>
-                            <span className="pg-fx__tag">{e.tag.toString(16).padStart(2, '0').toUpperCase()}</span>
-                            <span className="pg-fx__name">{e.name}</span>
+                <div className="pg-pane">
+                  {st.tab === 'white' && (
+                    <div className="pg-ct">
+                      <div className="pg-row"><span className="pg-label">CT</span><span className="pg-value">{kelvin} K <em>· {miredsFromKelvin(kelvin)} mireds</em></span></div>
+                      <input className="pg-range" type="range" min={2000} max={6500} step={10} value={kelvin} aria-label="Colour temperature in kelvin"
+                        style={{ ['--track' as string]: CT_TRACK }} onChange={(e) => setKelvin(Number(e.target.value))} />
+                      <div className="pg-fx pg-fx--ct" role="group" aria-label="Colour temperature presets">
+                        {CT_PRESETS.map(([k, name]) => {
+                          const on = lead.color.kind === 'ct' && lead.effect === 'none' && Math.abs(kelvin - k) <= 20; // mireds are integers: 6500 K round-trips to 6490
+                          return (
+                          <button key={k} type="button" aria-pressed={on} className={`pg-fx__cell${on ? ' is-on' : ''}`} onClick={() => setKelvin(k)}>
+                            <span className="pg-fx__tag">{name}</span>
+                            <span className="pg-fx__name">{k} K</span>
                           </button>
-                        );
-                      })}
-                    </div>
-                    <div className="pg-mac">
-                      <p className="pg-label">From this Mac <em>— touching a control stops it</em></p>
-                      <div className="pg-mac__row">
-                        <button type="button" className={`pg-fx__cell pg-fx__cell--police${st.police ? ' is-on is-live' : ''}`} onClick={() => (st.police ? stopPolice() : startPolice())} aria-pressed={!!st.police}>
-                          <span className="pg-fx__tag">{st.police ? 'Running' : 'Mac'}</span>
-                          <span className="pg-fx__name">Police</span>
-                        </button>
-                        <div className="pg-mac__speed">
-                          <div className="pg-row"><span className="pg-label">Interval</span><span className="pg-value">{st.policeInterval.toFixed(2)} s</span></div>
-                          <input className="pg-range pg-range--thin" type="range" min={0.15} max={1} step={0.05} value={st.policeInterval} aria-label="Police interval in seconds"
-                            style={{ ['--track' as string]: 'linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08))' }}
-                            onChange={(e) => { const v = Number(e.target.value); setSt((p) => ({ ...p, policeInterval: v, police: p.police ? { ...p.police, interval: v } : null })); }} />
-                        </div>
-                        {st.police && <button type="button" className="pg-mini" onClick={stopPolice}>Stop</button>}
+                          );
+                        })}
                       </div>
                     </div>
-                  </div>
-                )}
-                <p className="pg-packet" aria-live="off">
-                  <span className="pg-packet__k">Write</span>
-                  <span className="pg-packet__char">{pkt.char}</span>
-                  <span className="pg-packet__arrow">←</span>
-                  <span className="pg-packet__bytes">{pkt.bytes}</span>
-                  <span className="pg-packet__note">{pkt.note}</span>
-                </p>
-              </div>
-            </div>
+                  )}
 
-            <div className="pg-block">
-              <p className="pg-label pg-label--gap">Scenes</p>
-              <div className="pg-scenes">
-                {SCENES.map((sc) => (
-                  <button key={sc.name} type="button" className={`pg-chip${st.scene === sc.name ? ' is-on' : ''}`} onClick={() => applyScene(sc)} aria-pressed={st.scene === sc.name}>
-                    <span className="pg-chip__sw">{sc.palette.map((e, j) => <i key={j} style={{ background: css(displayRGB(e.color)) }} />)}</span>
-                    {sc.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="pg-block pg-block--timer">
-              <div className="pg-timer">
-                <div className="pg-timer__dial" aria-hidden="true">
-                  <svg viewBox="0 0 52 52" width="52" height="52">
-                    <circle cx="26" cy="26" r={RING_R} className="pg-timer__track" />
-                    <circle ref={ringRef} cx="26" cy="26" r={RING_R} className="pg-timer__arc" style={{ strokeDasharray: RING_C, strokeDashoffset: st.timer ? undefined : RING_C }} />
-                  </svg>
-                  <span ref={countRef} className="pg-timer__count">{st.timer ? fmtClock(st.timer.endsAt - Date.now() / 1000) : '00:00'}</span>
-                </div>
-                <div className="pg-timer__body">
-                  <div className="pg-row">
-                    <span className="pg-label">Timer<em className={st.timer ? '' : 'pg-timer__sub'}>{st.timer ? ` · off at ${offAt}` : ' · scaled to seconds'}</em></span>
-                    <div className="pg-seg pg-seg--small" role="tablist" aria-label="Timer mode">
-                      {([['timer', 'Timer'], ['sleep', 'Sleep']] as [TimerMode, string][]).map(([v, label]) => (
-                        <button key={v} type="button" className={`pg-seg__btn${st.timerMode === v ? ' is-on' : ''}`} onClick={() => setSt((p) => ({ ...p, timerMode: v, timer: p.timer ? { ...p.timer, mode: v } : null }))}>{label}</button>
-                      ))}
+                  {st.tab === 'color' && (
+                    <div className="pg-colorpane">
+                      <div
+                        className="pg-wheel"
+                        ref={wheelRef}
+                        role="slider"
+                        aria-label="Colour wheel"
+                        aria-valuetext={`hue ${Math.round(hs.h * 360)}°, saturation ${Math.round(hs.s * 100)}%`}
+                        tabIndex={0}
+                        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); wheelAt(e); }}
+                        onPointerMove={(e) => { if (e.buttons & 1) wheelAt(e); }}
+                        onPointerUp={() => setDrag(null)}
+                        onPointerCancel={() => setDrag(null)}
+                      >
+                        <div className="pg-wheel__thumb" style={{ left: thumbLeft, top: thumbTop, background: css(thumbRGB) }} />
+                      </div>
+                      <div className="pg-row pg-row--xy">
+                        <span className="pg-label">xy</span>
+                        <span className="pg-value">{lead.color.kind === 'xy' ? `${lead.color.x.toFixed(4)}  ${lead.color.y.toFixed(4)}` : '— (CT mode)'}</span>
+                      </div>
                     </div>
+                  )}
+
+                  {st.tab === 'effects' && (
+                    <div className="pg-fxpane">
+                      <div className="pg-fx" role="group" aria-label="Effects">
+                        {EFFECTS.map((e) => {
+                          const on = !st.police && lead.effect === e.id;
+                          return (
+                            <button key={e.id} type="button" aria-pressed={on} className={`pg-fx__cell${on ? ' is-on' : ''}`} onClick={() => setEffect(e.id)}>
+                              <span className="pg-fx__tag">{e.tag.toString(16).padStart(2, '0').toUpperCase()}</span>
+                              <span className="pg-fx__name">{e.name}</span>
+                            </button>
+                          );
+                        })}
+                        <button type="button" className={`pg-fx__cell pg-fx__cell--police${st.police ? ' is-on is-live' : ''}`} onClick={() => (st.police ? stopPolice() : startPolice())} aria-pressed={!!st.police}>
+                          <span className="pg-fx__tag">{st.police ? 'Live' : 'Mac'}</span>
+                          <span className="pg-fx__name">Police</span>
+                        </button>
+                      </div>
+                      <div className="pg-mac">
+                        <div className="pg-row"><span className="pg-label">Police interval <em className="pg-label__sub">· from this Mac</em></span><span className="pg-value">{st.policeInterval.toFixed(2)} s</span></div>
+                        <input className="pg-range pg-range--thin" type="range" min={0.15} max={1} step={0.05} value={st.policeInterval} aria-label="Police interval in seconds"
+                          style={{ ['--track' as string]: 'linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08))' }}
+                          onChange={(e) => { const v = Number(e.target.value); setSt((p) => ({ ...p, policeInterval: v, police: p.police ? { ...p.police, interval: v } : null })); }} />
+                      </div>
+                    </div>
+                  )}
+                  <p className="pg-packet" aria-live="off">
+                    <span className="pg-packet__k">Write</span>
+                    <span className="pg-packet__char">{pkt.char}</span>
+                    <span className="pg-packet__arrow">←</span>
+                    <span className="pg-packet__bytes">{pkt.bytes}</span>
+                    <span className="pg-packet__note">{pkt.note}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="pg-block">
+                <p className="pg-label pg-label--gap">Scenes</p>
+                <div className="pg-scenes">
+                  {SCENES.map((sc) => {
+                    const cols = sc.palette.map((e) => displayRGB(e.color));
+                    const on = st.scene === sc.name;
+                    return (
+                      <button key={sc.name} type="button" className={`pg-chip${on ? ' is-on' : ''}`} style={{ ['--sw' as string]: rgbList(cols[0]) }} onClick={() => applyScene(sc)} aria-pressed={on}>
+                        <span className="pg-chip__sw">{cols.map((c, j) => <i key={j} style={{ ['--sw' as string]: rgbList(c) }} />)}</span>
+                        {sc.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pg-block pg-block--timer">
+                <div className="pg-timer">
+                  <div className="pg-timer__dial" aria-hidden="true">
+                    <svg viewBox="0 0 52 52" width="52" height="52">
+                      <circle cx="26" cy="26" r={RING_R} className="pg-timer__track" />
+                      <circle ref={ringRef} cx="26" cy="26" r={RING_R} className="pg-timer__arc" style={{ strokeDasharray: RING_C, strokeDashoffset: st.timer ? undefined : RING_C }} />
+                    </svg>
+                    <span ref={countRef} className="pg-timer__count">{st.timer ? fmtClock(st.timer.endsAt - Date.now() / 1000) : '00:00'}</span>
                   </div>
-                  <div className="pg-timer__actions">
-                    {st.timer ? (
-                      <>
-                        <button type="button" className="pg-mini" onClick={() => extendTimer(10)}>+10 s</button>
-                        <button type="button" className="pg-mini" onClick={cancelTimer}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" className="pg-mini" onClick={() => startTimer(10)}>10 s</button>
-                        <button type="button" className="pg-mini" onClick={() => startTimer(30)}>30 s</button>
-                        <button type="button" className="pg-mini" onClick={() => startTimer(60)}>1 min</button>
-                      </>
-                    )}
-                    <span className="pg-timer__hint">{st.timerMode === 'sleep' ? 'Dims over the whole countdown, then off.' : 'Holds, then fades out and switches off.'}</span>
+                  <div className="pg-timer__body">
+                    <p className="pg-label">Timer<em>{st.timer ? ` · off at ${offAt}` : st.timerMode === 'sleep' ? ' · dim → off' : ' · hold → fade → off'}</em></p>
+                    <div className="pg-timer__actions">
+                      <div className="pg-seg pg-seg--small" role="tablist" aria-label="Timer mode">
+                        {([['timer', 'Timer'], ['sleep', 'Sleep']] as [TimerMode, string][]).map(([v, label]) => (
+                          <button key={v} type="button" role="tab" aria-selected={st.timerMode === v} className={`pg-seg__btn${st.timerMode === v ? ' is-on' : ''}`} onClick={() => setSt((p) => ({ ...p, timerMode: v, timer: p.timer ? { ...p.timer, mode: v } : null }))}>{label}</button>
+                        ))}
+                      </div>
+                      {st.timer ? (
+                        <>
+                          <button type="button" className="pg-mini" onClick={() => extendTimer(10)}>+10 s</button>
+                          <button type="button" className="pg-mini" onClick={cancelTimer}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" className="pg-mini" onClick={() => startTimer(10)}>10 s</button>
+                          <button type="button" className="pg-mini" onClick={() => startTimer(30)}>30 s</button>
+                          <button type="button" className="pg-mini" onClick={() => startTimer(60)}>1 min</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -735,7 +776,9 @@ export default function Playground() {
           </div>
         </div>
 
-        <p className="pg__foot mono reveal">In the app: 254-step brightness · 153–500 mireds · xy in gamut C · effects are bulb firmware · Police is written by the Mac every {st.policeInterval.toFixed(2)} s</p>
+        <ul className="pg-tags pg-tags--foot reveal" aria-label="In the app">
+          {footTags(st.policeInterval).map((t) => <li key={t}>{t}</li>)}
+        </ul>
       </div>
     </section>
   );

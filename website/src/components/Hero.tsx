@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { REPO_URL, useLatestRelease } from '../hooks/useLatestRelease';
+import { REPO_URL, formatBytes, useLatestRelease } from '../hooks/useLatestRelease';
 import './hero.css';
 
-// Media (CloudFront — verbatim per spec). Preconnect lives in index.html.
-const VIDEO_SRC =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_133255_956f653f-5d80-4b06-abd5-0f46c98b60fa.mp4';
-const POSTER_SRC =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260806_132328_5f9029c8-218f-4489-82b6-29ff2849920e.png';
+// Media: the CloudFront source re-cut as a centred bounce loop (forward + reverse, seam frames
+// trimmed) so it loops without a jump. Rebuild: see website/HERO-SPEC.md → "Hero video".
+const VIDEO_SRC = '/hero.mp4';
+const POSTER_SRC = '/hero-poster.jpg';
 const HUE_URL = 'https://www.philips-hue.com';
+const ROADMAP_URL = `${REPO_URL}/blob/main/ROADMAP.md`;
 
 interface NavLink {
   label: string;
@@ -139,30 +139,34 @@ export default function Hero() {
 
       <div className="hero__body">
         <div className="hero__panel">
-          <span className="hero__chip">[ Bluetooth · No Bridge ]</span>
-          <h1 className="hero__title">OPENHUE</h1>
-          <p className="hero__tagline">Your Hue bulbs, straight from your Mac.</p>
+          <span className="hero__chip">[ Swift · Native · Open source ]</span>
+          <h1 className="hero__title">Control the bulbs you&nbsp;own.</h1>
+          <p className="hero__lede">
+            A native Swift app for Philips Hue Bluetooth bulbs that does everything the Hue app does — and more.
+            No Bridge to buy, no account, no closed API between you and the hardware you already paid for.
+          </p>
 
-          <div className="hero__form">
-            <div className="hero__readout" role="status">
-              <span className="sr-only">Latest release</span>
-              OpenHue.dmg · v{release.version} · macOS 14 or later
-            </div>
+          <div className="hero__actions">
+            <a className="hero__btn hero__btn--solid" href={release.dmgUrl} download>
+              Download for macOS
+            </a>
             <a
               className="hero__btn hero__btn--ghost"
               href={REPO_URL}
               target="_blank"
               rel="noopener"
             >
-              View source on GitHub
-            </a>
-            <a className="hero__btn hero__btn--solid" href={release.dmgUrl} download>
-              Download for macOS
+              View source
             </a>
           </div>
 
-          <a className="hero__referral" href="#pairing">
-            Already paired with the Hue app?
+          <div className="hero__meta" role="status">
+            <span className="sr-only">Latest release</span>
+            v{release.version} · {formatBytes(release.dmgBytes) || '4.1 MB'} · macOS 14 or later
+          </div>
+
+          <a className="hero__referral" href={ROADMAP_URL} target="_blank" rel="noopener">
+            Next: Homebridge · Home Assistant · HomeKit — on the roadmap
           </a>
         </div>
       </div>

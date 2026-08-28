@@ -5,6 +5,7 @@ import './download.css';
 
 const XATTR = 'xattr -dr com.apple.quarantine /Applications/OpenHue.app';
 const BUILD = './make-app.sh && open build/OpenHue.app';
+const REQUIREMENTS = ['macOS 14+', 'Apple silicon · Intel', 'Hue Bluetooth bulbs · no Bridge'];
 
 function CodeBlock({ code, label }: { code: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -36,61 +37,41 @@ export default function Download() {
     <section id="download" className="section dl" ref={root}>
       <div className="section__inner">
         <div className="dl__hero">
-          <p className="eyebrow reveal">[ 05 — Download ]</p>
-          <h2 className="display dl__display reveal" data-delay="1">
+          {/* Faint Hue-warm light behind the statement */}
+          <div className="glow dl__glow" aria-hidden="true" />
+
+          <p className="eyebrow reveal">[ 06 — Download ]</p>
+          <div className="dl__icon-wrap reveal" data-delay="1">
+            <img className="dl__icon" src="/icon.png" width="512" height="512" alt="OpenHue app icon — a white bulb with a Hue-coloured halo" loading="lazy" decoding="async" />
+          </div>
+          <h2 className="display dl__display reveal" data-delay="2">
             Free, open source,<br />and {size || 'yours'}.
           </h2>
-          <div className="dl__readout reveal" role="status" data-delay="2">
+          <div className="dl__readout reveal" role="status" data-delay="3">
             <span className="sr-only">Latest release: </span>
             OpenHue.dmg · v{rel.version}{size ? ` · ${size}` : ''} · macOS 14 or later
           </div>
-          <div className="dl__actions reveal" data-delay="3">
+          <div className="dl__actions reveal" data-delay="4">
             <a className="btn btn--solid" href={rel.dmgUrl} download>Download .dmg</a>
             <a className="btn btn--ghost" href={rel.zipUrl} download>Download .zip</a>
             <a className="btn btn--outline" href={REPO_URL} target="_blank" rel="noopener">View on GitHub</a>
           </div>
-          <p className="dl__hint reveal" data-delay="4">
-            Unzip or open the disk image and drag <strong>OpenHue.app</strong> to <strong>/Applications</strong>.{' '}
-            <a href={rel.releaseUrl} target="_blank" rel="noopener">Release notes</a>
-          </p>
+          <ul className="dl-tags reveal" data-delay="4" aria-label="Requirements">
+            {REQUIREMENTS.map((t) => <li key={t}>{t}</li>)}
+            <li className="dl-tags__link"><a href={rel.releaseUrl} target="_blank" rel="noopener">Release notes ↗</a></li>
+          </ul>
         </div>
 
         <div className="dl__grid">
           <div className="dl-card reveal">
-            <p className="dl-card__k">Requirements</p>
-            <ul className="dl-list">
-              <li><span>macOS 14 Sonoma or later</span><em>Apple silicon or Intel</em></li>
-              <li><span>A Mac with Bluetooth LE</span><em>Every Mac since 2012</em></li>
-              <li><span>Philips Hue bulbs with Bluetooth</span><em>Not joined to a Hue Bridge</em></li>
-            </ul>
-            <p className="dl-card__note">
-              No Bridge, no account, no cloud. Everything lives in <code>~/Library/Application Support/OpenHue/</code> as
-              plain JSON; the Bluetooth bonds live in macOS.
-            </p>
-          </div>
-
-          <div className="dl-card reveal" data-delay="1">
-            <p className="dl-card__k">First launch · Gatekeeper</p>
-            <p className="dl-card__text">
-              The build is signed with an Apple <em>Development</em> certificate, not a notarized Developer ID, so
-              Gatekeeper refuses it once. Either <strong>right-click → Open → Open</strong>, or clear the quarantine flag:
-            </p>
+            <p className="dl-card__k">Gatekeeper</p>
+            <p className="dl-card__line">Development-signed, not notarized — <b>right-click → Open</b> once, or:</p>
             <CodeBlock code={XATTR} label="the quarantine command" />
-            <p className="dl-card__note">Then click Allow when macOS asks for Bluetooth, and add your first light.</p>
           </div>
-
-          <div className="dl-card reveal" data-delay="2">
+          <div className="dl-card reveal" data-delay="1">
             <p className="dl-card__k">Build from source</p>
-            <p className="dl-card__text">
-              Xcode 26 and macOS 14 or later. The script builds a release <strong>OpenHue.app</strong> and signs it with
-              your Apple Development identity if one is present.
-            </p>
+            <p className="dl-card__line">Xcode 26 · macOS 14+ · launch the .app, never <code>swift run</code>:</p>
             <CodeBlock code={BUILD} label="the build command" />
-            <p className="dl-card__note">
-              Never <code>swift run</code>: the Bluetooth permission is attributed to the process that owns the prompt —
-              Terminal, not the app — and the bare binary has no Info.plist, so CoreBluetooth reports <em>unauthorized</em>.
-              Always launch the .app that make-app.sh produces.
-            </p>
           </div>
         </div>
       </div>

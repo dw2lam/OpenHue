@@ -137,3 +137,13 @@ MOTION SUMMARY
 NO entrance animation on desktop panel. NO floating badges over video. NO cards, pills, glow, purple, or multi-shadow chrome. Sharp rects only. Aesthetic: black / white / translucent white glass, terminal-mono UI over cinematic face video.
 
 STACK: React + plain CSS. Custom properties as above. Page hero only (the rest of this site continues below it — that is fine; the hero itself stays a single full-viewport section).
+
+────────────────────────────────────────────────────────────────────────────
+Hero video (added 2026-08-28)
+────────────────────────────────────────────────────────────────────────────
+The CloudFront MP4's ring sits ~31 % from the left and its first/last frames don't match, so the
+site serves `public/hero.mp4`: the source shifted 360 px right (ring centred), its left 200–660 px faded to black with geq so the pad has no seam, and rendered as a bounce
+(forward + reverse, duplicate seam frames trimmed) → 20 s seamless loop, 1.8 MB. Poster = first frame.
+Rebuild:
+  ffmpeg -i hero-src.mp4 -filter_complex "[0:v]pad=w=iw+360:h=ih:x=360:y=0:color=black,crop=1920:1080:0:0,geq=lum='(lum(X,Y)-16)*clip((X-200)/460,0,1)+16':cb='(cb(X,Y)-128)*clip((X*2-200)/460,0,1)+128':cr='(cr(X,Y)-128)*clip((X*2-200)/460,0,1)+128',split[a][b];[b]reverse,trim=start_frame=1:end_frame=240,setpts=PTS-STARTPTS[r];[a][r]concat=n=2:v=1,format=yuv420p[v]" -map "[v]" -an -c:v libx264 -preset slow -crf 25 -g 48 -movflags +faststart -r 24 public/hero.mp4
+  ffmpeg -i public/hero.mp4 -frames:v 1 -q:v 3 public/hero-poster.jpg
