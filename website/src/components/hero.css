@@ -188,6 +188,8 @@
   .hero__gh { display: none; }
   .hero__toggle { display: block; }
   .hero__island { gap: calc(2px * var(--s)); }
+  /* On phones the island is just the menu button — sit it top-right, where the menu opens from */
+  .hero__nav { justify-content: flex-end; padding-right: calc(16px * var(--s) + env(safe-area-inset-right, 0px)); }
 }
 
 /* ── Mobile menu overlay ────────────────────────────────────── */
