@@ -407,3 +407,9 @@
   .pg-frame { will-change: auto; }
   .pg-ambient-wrap { animation: none; will-change: auto; }
 }
+
+/* Mobile tap targets */
+@media (max-width: 720px) {
+  .pg-seg__btn, .pg-chip, .pg-mini { min-height: 40px; }
+  .pg-switch { min-height: 30px; min-width: 52px; }
+}

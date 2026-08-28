@@ -99,3 +99,7 @@
 @media (prefers-reduced-motion: reduce) {
   .dl__hero > .dl__glow, .dl__icon-wrap { animation: none; will-change: auto; }
 }
+
+@media (max-width: 720px) {
+  .dl-code__copy { min-height: 40px; }
+}

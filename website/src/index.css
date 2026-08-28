@@ -47,6 +47,12 @@
   --shadow-deep: 0 calc(60px * var(--s)) calc(120px * var(--s)) -40px rgba(0, 0, 0, 0.9), 0 calc(20px * var(--s)) calc(40px * var(--s)) -20px rgba(0, 0, 0, 0.7);
 }
 
+/* Phones keep the original design size — the scale-down was a desktop complaint, and 0.86 pushes
+   mono labels under 10px on a 390px screen. */
+@media (max-width: 720px) {
+  :root { --s: 1; }
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html { background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
 html, body { margin: 0; padding: 0; }
