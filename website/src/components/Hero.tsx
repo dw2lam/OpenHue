@@ -18,9 +18,14 @@ interface NavLink {
 const NAV_LINKS: NavLink[] = [
   { label: 'Overview', href: '#story' },
   { label: 'Features', href: '#features' },
+  { label: 'Try it', href: '#playground' },
   { label: 'Pairing', href: '#pairing' },
   { label: 'GitHub', href: REPO_URL, external: true },
 ];
+const SPY_IDS = ['story', 'desktop', 'features', 'playground', 'pairing'];
+const SPY_TO_HREF: Record<string, string> = {
+  story: '#story', desktop: '#story', features: '#features', playground: '#playground', pairing: '#pairing',
+};
 
 const externalProps = (link: NavLink) =>
   link.external ? ({ target: '_blank', rel: 'noopener' } as const) : {};
@@ -32,6 +37,10 @@ export default function Hero() {
   const menuRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wasOpen = useRef(false);
+  const linksRef = useRef<HTMLElement>(null);
+  const [active, setActive] = useState<string | null>(null);
+  const [pill, setPill] = useState<{ x: number; w: number } | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
@@ -68,6 +77,43 @@ export default function Hero() {
     }
     return () => document.body.classList.remove('menu-open');
   }, [menuOpen]);
+
+  // Scroll-spy for the island: which section is under the top third of the viewport.
+  useEffect(() => {
+    const els = SPY_IDS.map((id) => document.getElementById(id)).filter((e): e is HTMLElement => !!e);
+    if (!els.length) return;
+    const pick = () => {
+      const line = window.innerHeight * 0.35;
+      let current: string | null = null;
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        if (r.top <= line && r.bottom > line) { current = SPY_TO_HREF[el.id] ?? null; break; }
+      }
+      setActive(current);
+      setScrolled(window.scrollY > 24);
+    };
+    pick();
+    let raf = 0;
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; pick(); }); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+
+  // Slide the highlight pill under the active link.
+  useEffect(() => {
+    const nav = linksRef.current;
+    if (!nav) return;
+    const measure = () => {
+      const a = active ? nav.querySelector<HTMLAnchorElement>(`a[href="${active}"]`) : null;
+      if (!a) { setPill(null); return; }
+      setPill({ x: a.offsetLeft, w: a.offsetWidth });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [active]);
 
   // Escape closes.
   useEffect(() => {
@@ -106,14 +152,25 @@ export default function Hero() {
         </video>
       </div>
 
-      <header className="hero__nav">
+      <header className={`hero__nav${scrolled ? ' is-scrolled' : ''}`}>
         <div className="hero__island">
           <a className="hero__logo" href="#top" aria-label="OpenHue — top of page">
             <img src="/icon.png" width="30" height="30" alt="" decoding="async" />
           </a>
-          <nav className="hero__links" aria-label="Primary">
+          <nav className="hero__links" aria-label="Primary" ref={linksRef}>
+            <span
+              className={`hero__pill${pill ? ' is-on' : ''}`}
+              aria-hidden="true"
+              style={pill ? { transform: `translateX(${pill.x}px)`, width: pill.w } : undefined}
+            />
             {NAV_LINKS.map((link) => (
-              <a key={link.label} href={link.href} {...externalProps(link)}>
+              <a
+                key={link.label}
+                href={link.href}
+                className={active === link.href ? 'is-active' : undefined}
+                aria-current={active === link.href ? 'true' : undefined}
+                {...externalProps(link)}
+              >
                 {link.label}
               </a>
             ))}
@@ -138,7 +195,8 @@ export default function Hero() {
         <div className="hero__panel">
           <p className="hero__meet">
             <span className="hero__meet-k">Meet</span>
-            <span className="hero__meet-mark">OPENHUE</span>
+            <img className="hero__meet-icon" src="/icon.png" width="28" height="28" alt="" decoding="async" />
+            <span className="hero__meet-mark">OpenHue</span>
           </p>
           <h1 className="hero__title">Control the bulbs you&nbsp;own.</h1>
           <p className="hero__lede">
@@ -165,10 +223,13 @@ export default function Hero() {
             v{release.version} · {formatBytes(release.dmgBytes) || '4.1 MB'} · macOS 14 or later
           </div>
 
-          <a className="hero__referral" href={ROADMAP_URL} target="_blank" rel="noopener">
-            Next: Homebridge · Home Assistant · HomeKit — on the roadmap
-          </a>
         </div>
+
+        <a className="hero__roadmap" href={ROADMAP_URL} target="_blank" rel="noopener">
+          <span className="hero__roadmap-k">Next</span>
+          <span>Homebridge</span><i>·</i><span>Home Assistant</span><i>·</i><span>HomeKit</span>
+          <span className="hero__roadmap-k">on the roadmap ↗</span>
+        </a>
       </div>
 
       <footer className="hero__legal">
